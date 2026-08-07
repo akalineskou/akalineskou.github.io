@@ -1,0 +1,13 @@
+{
+  "name": "youtube-practice-sections",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static URL-only YouTube practice section looper for GitHub Pages.",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/url-state.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

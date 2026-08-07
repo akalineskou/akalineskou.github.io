@@ -1,0 +1,1364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A URL-only YouTube practice looper for music sections.">
+  <title>YouTube Practice Sections</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-soft: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --accent-strong: #0284c7;
+      --danger: #fb7185;
+      --success: #34d399;
+      --border: #334155;
+      --shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+      --radius: 16px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 28rem), var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #0b1120;
+      color: var(--text);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+    }
+
+    textarea {
+      min-height: 5rem;
+      resize: vertical;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.85rem;
+    }
+
+    button {
+      cursor: pointer;
+      padding: 0.65rem 0.9rem;
+      font-weight: 700;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    button:hover:not(:disabled),
+    button:focus-visible:not(:disabled) {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .primary {
+      border-color: var(--accent-strong);
+      background: linear-gradient(135deg, var(--accent-strong), #075985);
+      color: white;
+    }
+
+    .danger {
+      border-color: rgba(251, 113, 133, 0.55);
+      color: #fecdd3;
+    }
+
+    .small {
+      padding: 0.42rem 0.55rem;
+      font-size: 0.85rem;
+      font-weight: 650;
+    }
+
+    header,
+    main {
+      width: min(1240px, calc(100% - 2rem));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 2rem 0 1rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.8rem);
+      letter-spacing: -0.055em;
+      line-height: 0.95;
+    }
+
+    h2,
+    h3 {
+      margin-top: 0;
+      letter-spacing: -0.025em;
+    }
+
+    .subtitle {
+      max-width: 70ch;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+      gap: 1rem;
+      align-items: start;
+      padding-bottom: 2rem;
+    }
+
+    .panel {
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: var(--radius);
+      background: rgba(17, 24, 39, 0.86);
+      box-shadow: var(--shadow);
+      padding: 1rem;
+      backdrop-filter: blur(18px);
+    }
+
+    .stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .row {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .row > .grow {
+      flex: 1 1 18rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    label,
+    .label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 750;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.87rem;
+    }
+
+    .status {
+      display: block;
+      min-height: 1.35rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .status.good {
+      color: var(--success);
+    }
+
+    .status.bad {
+      color: var(--danger);
+    }
+
+    .player-wrap {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #020617;
+      aspect-ratio: 16 / 9;
+    }
+
+    #player,
+    #player iframe {
+      width: 100%;
+      height: 100%;
+    }
+
+    .empty-player {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      place-items: center;
+      color: var(--muted);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .time-readout {
+      display: flex;
+      gap: 0.65rem;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.65);
+      padding: 0.8rem;
+    }
+
+    .big-time {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: clamp(1.35rem, 3vw, 2.4rem);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.04em;
+    }
+
+    .active-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.1);
+      color: #bae6fd;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 650;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .toggle input {
+      width: auto;
+      accent-color: var(--accent-strong);
+    }
+
+    .section-list {
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .section-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.78);
+      padding: 0.85rem;
+    }
+
+    .section-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.32), 0 16px 35px rgba(2, 132, 199, 0.16);
+    }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: minmax(10rem, 1fr) 6.5rem;
+      gap: 0.65rem;
+      align-items: end;
+      margin-bottom: 0.7rem;
+    }
+
+    .section-fields {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.65rem;
+    }
+
+    .section-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.7rem;
+    }
+
+    .time-input-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    .time-input-wrap input.invalid {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.12);
+    }
+
+    .fine-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem;
+      align-items: end;
+    }
+
+    .fine-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .kbd-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.35rem 0.8rem;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    kbd {
+      display: inline-block;
+      min-width: 1.6rem;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      background: #020617;
+      color: var(--text);
+      padding: 0.06rem 0.3rem;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.8rem;
+    }
+
+    .empty-state {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      color: var(--muted);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.84rem;
+      margin: 0;
+    }
+
+    @media (max-width: 980px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      header,
+      main {
+        width: min(100% - 1rem, 1240px);
+      }
+
+      .section-header,
+      .section-fields,
+      .fine-grid,
+      .kbd-list {
+        grid-template-columns: 1fr;
+      }
+
+      .row > button,
+      .row > .grow {
+        flex-basis: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>YouTube Practice Sections</h1>
+    <p class="subtitle">Load a YouTube video, mark precise practice sections, loop them at custom speeds, and share everything through the page URL. This app does not save your practice data in browser storage.</p>
+  </header>
+
+  <main class="grid">
+    <section class="stack" aria-label="Player and section controls">
+      <div class="panel stack">
+        <div class="field">
+          <label for="videoInput">YouTube URL or video ID</label>
+          <div class="row">
+            <input id="videoInput" class="grow" type="text" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" autocomplete="off" spellcheck="false">
+            <button id="loadVideoButton" class="primary" type="button">Load video</button>
+          </div>
+          <output id="videoStatus" class="status" aria-live="polite"></output>
+        </div>
+
+        <div class="player-wrap">
+          <div id="player"><div class="empty-player">Enter a YouTube URL or open a shared link to load a player.</div></div>
+        </div>
+
+        <div class="time-readout">
+          <div>
+            <div class="label">Current time</div>
+            <div id="currentTime" class="big-time">00:00.000</div>
+          </div>
+          <div>
+            <div class="label">Active section</div>
+            <div id="activeSectionLabel" class="active-badge">None</div>
+          </div>
+        </div>
+
+        <div class="row" aria-label="Playback controls">
+          <button id="playPauseButton" type="button">Play / Pause</button>
+          <button id="seekBackButton" class="small" type="button">−5s</button>
+          <button id="seekForwardButton" class="small" type="button">+5s</button>
+          <label class="toggle">
+            <input id="loopToggle" type="checkbox" checked>
+            Loop active section
+          </label>
+        </div>
+      </div>
+
+      <div class="panel stack">
+        <div class="row">
+          <div class="grow">
+            <h2>Practice sections</h2>
+            <p class="hint">Times accept seconds or clock notation: <code>83.250</code>, <code>1:23.250</code>, or <code>01:02:03.250</code>.</p>
+          </div>
+          <button id="addSectionButton" class="primary" type="button">Add section at playhead</button>
+        </div>
+
+        <div id="sectionList" class="section-list" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <aside class="stack" aria-label="Sharing and fine tuning">
+      <div class="panel stack">
+        <h2>Share / export</h2>
+        <p class="hint">The video ID, section names, start/end times, speeds, loop setting, and active section are encoded into the URL hash.</p>
+        <div class="field">
+          <label for="shareUrl">Current share URL</label>
+          <textarea id="shareUrl" readonly spellcheck="false"></textarea>
+        </div>
+        <div class="row">
+          <button id="copyShareButton" class="primary" type="button">Copy URL</button>
+          <button id="openShareButton" type="button">Open URL</button>
+          <button id="resetButton" class="danger" type="button">Reset page state</button>
+        </div>
+        <output id="shareStatus" class="status" aria-live="polite"></output>
+      </div>
+
+      <div class="panel stack">
+        <h2>Fine tune</h2>
+        <p class="hint">Select a section, choose start or end, then nudge by milliseconds for tight loops.</p>
+        <div class="fine-grid">
+          <div class="field">
+            <label for="fineTarget">Target</label>
+            <select id="fineTarget">
+              <option value="start">Start</option>
+              <option value="end">End</option>
+              <option value="playhead">Playhead</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="nudgeAmount">Nudge amount</label>
+            <select id="nudgeAmount">
+              <option value="0.001">0.001s</option>
+              <option value="0.005">0.005s</option>
+              <option value="0.01" selected>0.010s</option>
+              <option value="0.05">0.050s</option>
+              <option value="0.1">0.100s</option>
+              <option value="1">1.000s</option>
+            </select>
+          </div>
+          <div class="fine-buttons">
+            <button id="nudgeDownButton" type="button">−</button>
+            <button id="nudgeUpButton" type="button">+</button>
+          </div>
+          <button id="seekActiveStartButton" type="button">Seek active start</button>
+        </div>
+      </div>
+
+      <div class="panel stack">
+        <h2>Keyboard shortcuts</h2>
+        <ul class="kbd-list">
+          <li><kbd>Space</kbd> Play / pause</li>
+          <li><kbd>P</kbd> Play active section</li>
+          <li><kbd>S</kbd> Set active start</li>
+          <li><kbd>E</kbd> Set active end</li>
+          <li><kbd>,</kbd> Seek −0.1s</li>
+          <li><kbd>.</kbd> Seek +0.1s</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <p class="footer-note">No localStorage, sessionStorage, cookies, IndexedDB, or server API are used by this app for practice data. YouTube itself is loaded from the public IFrame API.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    /* URL_STATE_UTILS_START */
+    const STATE_VERSION = 1;
+    const SHARE_HASH_KEY = "ytp";
+    const MIN_SPEED = 0.25;
+    const MAX_SPEED = 1.5;
+
+    function roundSeconds(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return 0;
+      return Math.max(0, Math.round(number * 1000) / 1000);
+    }
+
+    function roundSpeed(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return 1;
+      return Math.min(MAX_SPEED, Math.max(MIN_SPEED, Math.round(number * 1000) / 1000));
+    }
+
+    function extractYouTubeId(input) {
+      const raw = String(input || "").trim();
+      if (!raw) return "";
+
+      const directIdMatch = raw.match(/^[a-zA-Z0-9_-]{11}$/);
+      if (directIdMatch) return raw;
+
+      try {
+        const url = new URL(raw);
+        const host = url.hostname.replace(/^www\./, "").toLowerCase();
+
+        if (host === "youtu.be") {
+          return sanitizeYouTubeId(url.pathname.split("/").filter(Boolean)[0]);
+        }
+
+        if (isYouTubeHost(host)) {
+          const fromQuery = sanitizeYouTubeId(url.searchParams.get("v"));
+          if (fromQuery) return fromQuery;
+
+          const parts = url.pathname.split("/").filter(Boolean);
+          const markerIndex = parts.findIndex(part => ["embed", "shorts", "live", "v"].includes(part));
+          if (markerIndex >= 0 && parts[markerIndex + 1]) {
+            return sanitizeYouTubeId(parts[markerIndex + 1]);
+          }
+        }
+      } catch (_error) {
+        const looseMatch = raw.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([a-zA-Z0-9_-]{11})/);
+        if (looseMatch) return looseMatch[1];
+      }
+
+      return "";
+    }
+
+    function sanitizeYouTubeId(value) {
+      const match = String(value || "").match(/[a-zA-Z0-9_-]{11}/);
+      return match ? match[0] : "";
+    }
+
+    function isYouTubeHost(host) {
+      return host === "youtube.com"
+        || host.endsWith(".youtube.com")
+        || host === "youtube-nocookie.com"
+        || host.endsWith(".youtube-nocookie.com");
+    }
+
+    function parseTimeInput(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return NaN;
+
+      const normalized = raw.replace(/,/g, ".");
+      if (/^\d+(?:\.\d+)?$/.test(normalized)) {
+        return roundSeconds(Number(normalized));
+      }
+
+      const parts = normalized.split(":");
+      if (parts.length < 2 || parts.length > 3) return NaN;
+      if (!parts.every(part => /^\d+(?:\.\d+)?$/.test(part))) return NaN;
+
+      const multipliers = parts.length === 2 ? [60, 1] : [3600, 60, 1];
+      const total = parts.reduce((sum, part, index) => sum + Number(part) * multipliers[index], 0);
+      return roundSeconds(total);
+    }
+
+    function formatTime(seconds) {
+      const totalMilliseconds = Math.max(0, Math.round(Number(seconds || 0) * 1000));
+      const milliseconds = totalMilliseconds % 1000;
+      const totalSeconds = Math.floor(totalMilliseconds / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      const ms = String(milliseconds).padStart(3, "0");
+      const mm = String(minutes).padStart(2, "0");
+      const ss = String(secs).padStart(2, "0");
+
+      if (hours > 0) {
+        return `${String(hours).padStart(2, "0")}:${mm}:${ss}.${ms}`;
+      }
+
+      return `${mm}:${ss}.${ms}`;
+    }
+
+    function createSectionId(index) {
+      return `section-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function normalizeState(rawState) {
+      const rawSections = Array.isArray(rawState && rawState.sections) ? rawState.sections : [];
+      const sections = rawSections.map((section, index) => {
+        const start = roundSeconds(section.start);
+        const end = Math.max(start, roundSeconds(section.end));
+        return {
+          id: section.id || createSectionId(index),
+          name: String(section.name || `Section ${index + 1}`).slice(0, 120),
+          start,
+          end,
+          speed: roundSpeed(section.speed)
+        };
+      });
+
+      let activeIndex = Number.isInteger(rawState && rawState.activeIndex) ? rawState.activeIndex : -1;
+      if (activeIndex >= sections.length) activeIndex = sections.length - 1;
+      if (activeIndex < -1) activeIndex = -1;
+
+      return {
+        version: STATE_VERSION,
+        videoId: sanitizeYouTubeId(rawState && rawState.videoId),
+        loop: !(rawState && rawState.loop === false),
+        activeIndex,
+        sections
+      };
+    }
+
+    function compactState(state) {
+      const normalized = normalizeState(state || {});
+      return {
+        v: STATE_VERSION,
+        y: normalized.videoId,
+        l: normalized.loop ? 1 : 0,
+        a: normalized.activeIndex,
+        s: normalized.sections.map(section => [
+          section.name,
+          roundSeconds(section.start),
+          roundSeconds(section.end),
+          roundSpeed(section.speed)
+        ])
+      };
+    }
+
+    function inflateState(compact) {
+      if (!compact || compact.v !== STATE_VERSION) {
+        throw new Error("Unsupported or missing shared state version.");
+      }
+
+      return normalizeState({
+        videoId: compact.y,
+        loop: compact.l !== 0,
+        activeIndex: Number.isInteger(compact.a) ? compact.a : -1,
+        sections: Array.isArray(compact.s)
+          ? compact.s.map((entry, index) => ({
+              id: createSectionId(index),
+              name: Array.isArray(entry) ? entry[0] : `Section ${index + 1}`,
+              start: Array.isArray(entry) ? entry[1] : 0,
+              end: Array.isArray(entry) ? entry[2] : 0,
+              speed: Array.isArray(entry) ? entry[3] : 1
+            }))
+          : []
+      });
+    }
+
+    function utf8ToBase64Url(text) {
+      const bytes = new TextEncoder().encode(text);
+      let binary = "";
+      bytes.forEach(byte => binary += String.fromCharCode(byte));
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+
+    function base64UrlToUtf8(value) {
+      const padded = String(value || "").replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(String(value || "").length / 4) * 4, "=");
+      const binary = atob(padded);
+      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+
+    function encodeStateToHash(state) {
+      return `#${SHARE_HASH_KEY}=${utf8ToBase64Url(JSON.stringify(compactState(state)))}`;
+    }
+
+    function decodeStateFromHash(hash) {
+      const rawHash = String(hash || "").replace(/^#/, "");
+      const params = new URLSearchParams(rawHash);
+      const payload = params.get(SHARE_HASH_KEY);
+      if (!payload) return normalizeState({});
+      return inflateState(JSON.parse(base64UrlToUtf8(payload)));
+    }
+    /* URL_STATE_UTILS_END */
+
+    const state = normalizeState({});
+    const PLAYBACK_SPEED_OPTIONS = [
+      0.25, 0.3, 0.35, 0.4, 0.45,
+      0.5, 0.55, 0.6, 0.65, 0.7,
+      0.75, 0.8, 0.85, 0.9, 0.95,
+      1, 1.25, 1.5
+    ];
+    let player = null;
+    let playerReady = false;
+    let ignoreNextHashChange = false;
+    let tickTimer = null;
+    let lastRenderedHash = "";
+
+    const elements = {
+      videoInput: document.getElementById("videoInput"),
+      loadVideoButton: document.getElementById("loadVideoButton"),
+      videoStatus: document.getElementById("videoStatus"),
+      player: document.getElementById("player"),
+      currentTime: document.getElementById("currentTime"),
+      activeSectionLabel: document.getElementById("activeSectionLabel"),
+      playPauseButton: document.getElementById("playPauseButton"),
+      seekBackButton: document.getElementById("seekBackButton"),
+      seekForwardButton: document.getElementById("seekForwardButton"),
+      loopToggle: document.getElementById("loopToggle"),
+      addSectionButton: document.getElementById("addSectionButton"),
+      sectionList: document.getElementById("sectionList"),
+      shareUrl: document.getElementById("shareUrl"),
+      copyShareButton: document.getElementById("copyShareButton"),
+      openShareButton: document.getElementById("openShareButton"),
+      resetButton: document.getElementById("resetButton"),
+      shareStatus: document.getElementById("shareStatus"),
+      fineTarget: document.getElementById("fineTarget"),
+      nudgeAmount: document.getElementById("nudgeAmount"),
+      nudgeDownButton: document.getElementById("nudgeDownButton"),
+      nudgeUpButton: document.getElementById("nudgeUpButton"),
+      seekActiveStartButton: document.getElementById("seekActiveStartButton")
+    };
+
+    const youtubeApiReady = new Promise(resolve => {
+      window.onYouTubeIframeAPIReady = resolve;
+    });
+
+    function boot() {
+      try {
+        applyState(decodeStateFromHash(window.location.hash), { loadVideo: true, syncUrl: false });
+        setStatus(elements.videoStatus, state.videoId ? "Loaded state from the URL." : "Paste a YouTube URL or video ID to begin.", state.videoId ? "good" : "");
+      } catch (error) {
+        setStatus(elements.videoStatus, `Could not read shared URL: ${error.message}`, "bad");
+        applyState(normalizeState({}), { loadVideo: false, syncUrl: true });
+      }
+
+      bindEvents();
+      renderAll();
+      startTicker();
+    }
+
+    function bindEvents() {
+      elements.loadVideoButton.addEventListener("click", loadVideoFromInput);
+      elements.videoInput.addEventListener("keydown", event => {
+        if (event.key === "Enter") loadVideoFromInput();
+      });
+
+      elements.playPauseButton.addEventListener("click", togglePlayPause);
+      elements.seekBackButton.addEventListener("click", () => seekBy(-5));
+      elements.seekForwardButton.addEventListener("click", () => seekBy(5));
+      elements.loopToggle.addEventListener("change", () => {
+        state.loop = elements.loopToggle.checked;
+        syncAndRender();
+      });
+
+      elements.addSectionButton.addEventListener("click", addSectionAtPlayhead);
+      elements.copyShareButton.addEventListener("click", copyShareUrl);
+      elements.openShareButton.addEventListener("click", () => window.open(elements.shareUrl.value, "_blank", "noopener"));
+      elements.resetButton.addEventListener("click", resetPageState);
+      elements.nudgeDownButton.addEventListener("click", () => nudgeSelected(-getNudgeAmount()));
+      elements.nudgeUpButton.addEventListener("click", () => nudgeSelected(getNudgeAmount()));
+      elements.seekActiveStartButton.addEventListener("click", seekActiveStart);
+
+      elements.sectionList.addEventListener("input", handleSectionInput);
+      elements.sectionList.addEventListener("change", handleSectionChange);
+      elements.sectionList.addEventListener("click", handleSectionClick);
+      elements.sectionList.addEventListener("focusin", handleSectionFocus);
+
+      window.addEventListener("hashchange", () => {
+        if (ignoreNextHashChange) {
+          ignoreNextHashChange = false;
+          return;
+        }
+
+        try {
+          applyState(decodeStateFromHash(window.location.hash), { loadVideo: true, syncUrl: false });
+          setStatus(elements.shareStatus, "Loaded updated state from the URL.", "good");
+        } catch (error) {
+          setStatus(elements.shareStatus, `Could not load URL state: ${error.message}`, "bad");
+        }
+      });
+
+      document.addEventListener("keydown", handleKeyboardShortcuts);
+    }
+
+    function applyState(nextState, options = {}) {
+      const normalized = normalizeState(nextState);
+      state.videoId = normalized.videoId;
+      state.loop = normalized.loop;
+      state.activeIndex = normalized.activeIndex;
+      state.sections = normalized.sections;
+
+      elements.videoInput.value = state.videoId;
+      elements.loopToggle.checked = state.loop;
+
+      if (options.loadVideo && state.videoId) {
+        loadVideoById(state.videoId);
+      }
+
+      if (options.syncUrl) syncUrl();
+      renderAll();
+    }
+
+    function loadVideoFromInput() {
+      const videoId = extractYouTubeId(elements.videoInput.value);
+      if (!videoId) {
+        setStatus(elements.videoStatus, "That does not look like a YouTube URL or 11-character video ID.", "bad");
+        return;
+      }
+
+      state.videoId = videoId;
+      elements.videoInput.value = videoId;
+      loadVideoById(videoId);
+      setStatus(elements.videoStatus, "Video loaded. Add or play a section to begin practicing.", "good");
+      syncAndRender();
+    }
+
+    async function loadVideoById(videoId) {
+      if (!videoId) return;
+      await youtubeApiReady;
+
+      if (player) {
+        playerReady = true;
+        player.loadVideoById(videoId);
+        applyActiveSpeed();
+        return;
+      }
+
+      elements.player.innerHTML = "";
+      player = new YT.Player("player", {
+        host: "https://www.youtube-nocookie.com",
+        videoId,
+        playerVars: {
+          playsinline: 1,
+          rel: 0,
+          modestbranding: 1,
+          enablejsapi: 1
+        },
+        events: {
+          onReady: () => {
+            playerReady = true;
+            applyActiveSpeed();
+          },
+          onStateChange: () => {
+            applyActiveSpeed();
+          },
+          onPlaybackRateChange: () => {
+            applyActiveSpeed();
+          },
+          onError: event => {
+            setStatus(elements.videoStatus, `YouTube player error ${event.data}. Check that the video allows embedding.`, "bad");
+          }
+        }
+      });
+    }
+
+    function renderAll() {
+      renderShareUrl();
+      renderActiveLabel();
+      renderSections();
+      elements.loopToggle.checked = state.loop;
+      updateButtonStates();
+    }
+
+    function renderShareUrl() {
+      const hash = encodeStateToHash(state);
+      elements.shareUrl.value = `${getBaseUrl()}${hash}`;
+    }
+
+    function syncAndRender() {
+      syncUrl();
+      renderAll();
+    }
+
+    function syncUrl() {
+      const hash = encodeStateToHash(state);
+      renderShareUrl();
+      if (hash === lastRenderedHash || window.location.hash === hash) {
+        lastRenderedHash = hash;
+        return;
+      }
+
+      lastRenderedHash = hash;
+      try {
+        history.replaceState(null, "", `${getBaseUrl()}${hash}`);
+      } catch (_error) {
+        ignoreNextHashChange = true;
+        window.location.hash = hash;
+      }
+    }
+
+    function renderActiveLabel() {
+      const section = getActiveSection();
+      elements.activeSectionLabel.textContent = section ? `${state.activeIndex + 1}. ${section.name}` : "None";
+    }
+
+    function renderSections() {
+      if (state.sections.length === 0) {
+        elements.sectionList.innerHTML = `<div class="empty-state">No sections yet. Move the video to the start of a phrase and click <strong>Add section at playhead</strong>.</div>`;
+        return;
+      }
+
+      elements.sectionList.innerHTML = state.sections.map((section, index) => `
+        <article class="section-card${index === state.activeIndex ? " active" : ""}" data-index="${index}">
+          <div class="section-header">
+            <div class="field">
+              <label for="name-${section.id}">Name</label>
+              <input id="name-${section.id}" data-field="name" data-index="${index}" type="text" value="${escapeAttribute(section.name)}" maxlength="120">
+            </div>
+            <div class="field">
+              <label for="speed-${section.id}">Speed</label>
+              <select id="speed-${section.id}" data-field="speed" data-index="${index}">
+                ${renderSpeedOptions(section.speed)}
+              </select>
+            </div>
+          </div>
+          <div class="section-fields">
+            ${renderTimeField(section, index, "start", "Start")}
+            ${renderTimeField(section, index, "end", "End")}
+            <div class="field">
+              <span class="label">Length</span>
+              <input type="text" value="${formatTime(section.end - section.start)}" readonly aria-label="Section length">
+            </div>
+          </div>
+          <div class="section-actions">
+            <button class="primary small" data-action="play-section" data-index="${index}" type="button">Play loop</button>
+            <button class="small" data-action="set-active" data-index="${index}" type="button">Select</button>
+            <button class="small" data-action="set-start-now" data-index="${index}" type="button">Start = now</button>
+            <button class="small" data-action="set-end-now" data-index="${index}" type="button">End = now</button>
+            <button class="small" data-action="duplicate" data-index="${index}" type="button">Duplicate</button>
+            <button class="small" data-action="move-up" data-index="${index}" type="button" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button class="small" data-action="move-down" data-index="${index}" type="button" ${index === state.sections.length - 1 ? "disabled" : ""}>↓</button>
+            <button class="danger small" data-action="delete" data-index="${index}" type="button">Delete</button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderTimeField(section, index, field, label) {
+      return `
+        <div class="field">
+          <label for="${field}-${section.id}">${label}</label>
+          <div class="time-input-wrap">
+            <input id="${field}-${section.id}" data-field="${field}" data-index="${index}" data-time-input="true" type="text" inputmode="decimal" value="${formatTime(section[field])}">
+            <button class="small" data-action="seek-to-${field}" data-index="${index}" type="button" aria-label="Seek to ${label.toLowerCase()}">Go</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSpeedOptions(currentSpeed) {
+      const speed = roundSpeed(currentSpeed);
+      const options = PLAYBACK_SPEED_OPTIONS.includes(speed)
+        ? PLAYBACK_SPEED_OPTIONS
+        : [...PLAYBACK_SPEED_OPTIONS, speed].sort((left, right) => left - right);
+
+      return options.map(option => `
+        <option value="${option}"${option === speed ? " selected" : ""}>${formatSpeedLabel(option)}</option>
+      `).join("");
+    }
+
+    function formatSpeedLabel(speed) {
+      return `${Number(speed).toFixed(3).replace(/\.?0+$/, "")}×`;
+    }
+
+    function handleSectionInput(event) {
+      const target = event.target;
+      const index = Number(target.dataset.index);
+      const field = target.dataset.field;
+      if (!Number.isInteger(index) || !field || !state.sections[index]) return;
+
+      if (field === "name") {
+        state.sections[index].name = target.value.slice(0, 120) || `Section ${index + 1}`;
+        syncUrl();
+        renderActiveLabel();
+        return;
+      }
+
+      if (field === "speed") {
+        updateSectionSpeed(index, target.value);
+        return;
+      }
+
+      if (field === "start" || field === "end") {
+        const parsed = parseTimeInput(target.value);
+        target.classList.toggle("invalid", !Number.isFinite(parsed));
+        if (Number.isFinite(parsed)) {
+          updateSectionTime(index, field, parsed, { render: false });
+          syncUrl();
+        }
+      }
+    }
+
+    function handleSectionChange(event) {
+      const target = event.target;
+      const index = Number(target.dataset.index);
+      const field = target.dataset.field;
+
+      if (field === "speed") {
+        updateSectionSpeed(index, target.value);
+        return;
+      }
+
+      if (!target.dataset.timeInput) return;
+      const parsed = parseTimeInput(target.value);
+
+      if (!state.sections[index] || !Number.isFinite(parsed)) {
+        target.classList.add("invalid");
+        return;
+      }
+
+      updateSectionTime(index, field, parsed);
+    }
+
+    function handleSectionClick(event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const index = Number(button.dataset.index);
+      const action = button.dataset.action;
+
+      if (!Number.isInteger(index) || !state.sections[index]) return;
+      state.activeIndex = index;
+
+      if (action === "play-section") playSection(index);
+      if (action === "set-active") selectSection(index);
+      if (action === "set-start-now") setSectionBoundaryToNow(index, "start");
+      if (action === "set-end-now") setSectionBoundaryToNow(index, "end");
+      if (action === "seek-to-start") seekTo(state.sections[index].start);
+      if (action === "seek-to-end") seekTo(state.sections[index].end);
+      if (action === "duplicate") duplicateSection(index);
+      if (action === "move-up") moveSection(index, -1);
+      if (action === "move-down") moveSection(index, 1);
+      if (action === "delete") deleteSection(index);
+
+      syncAndRender();
+    }
+
+    function handleSectionFocus(event) {
+      const sectionCard = event.target.closest(".section-card[data-index]");
+      if (!sectionCard) return;
+      const index = Number(sectionCard.dataset.index);
+      if (Number.isInteger(index) && state.sections[index] && state.activeIndex !== index) {
+        state.activeIndex = index;
+        applyActiveSpeed();
+        syncUrl();
+        renderActiveLabel();
+        updateSectionActiveClasses();
+        updateButtonStates();
+      }
+    }
+
+    function addSectionAtPlayhead() {
+      const start = getCurrentPlayerTime();
+      const end = roundSeconds(start + 8);
+      state.sections.push({
+        id: createSectionId(state.sections.length),
+        name: `Section ${state.sections.length + 1}`,
+        start,
+        end,
+        speed: getActiveSection() ? getActiveSection().speed : 1
+      });
+      state.activeIndex = state.sections.length - 1;
+      syncAndRender();
+      setStatus(elements.shareStatus, "Section added and encoded into the URL.", "good");
+    }
+
+    function selectSection(index) {
+      state.activeIndex = index;
+      applyActiveSpeed();
+    }
+
+    function duplicateSection(index) {
+      const original = state.sections[index];
+      state.sections.splice(index + 1, 0, {
+        ...original,
+        id: createSectionId(index + 1),
+        name: `${original.name} copy`
+      });
+      state.activeIndex = index + 1;
+    }
+
+    function moveSection(index, direction) {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= state.sections.length) return;
+      const [section] = state.sections.splice(index, 1);
+      state.sections.splice(nextIndex, 0, section);
+      state.activeIndex = nextIndex;
+    }
+
+    function deleteSection(index) {
+      state.sections.splice(index, 1);
+      if (state.sections.length === 0) {
+        state.activeIndex = -1;
+      } else {
+        state.activeIndex = Math.min(index, state.sections.length - 1);
+      }
+    }
+
+    function setSectionBoundaryToNow(index, field) {
+      updateSectionTime(index, field, getCurrentPlayerTime());
+    }
+
+    function updateSectionTime(index, field, value, options = {}) {
+      const section = state.sections[index];
+      if (!section) return;
+
+      const time = roundSeconds(value);
+      if (field === "start") {
+        section.start = time;
+        if (section.end < section.start) section.end = section.start;
+      } else {
+        section.end = time;
+        if (section.start > section.end) section.start = section.end;
+      }
+
+      if (options.render !== false) syncAndRender();
+    }
+
+    function updateSectionSpeed(index, value) {
+      const section = state.sections[index];
+      if (!section) return;
+
+      section.speed = roundSpeed(value);
+      if (index === state.activeIndex) applyActiveSpeed();
+      syncUrl();
+    }
+
+    function updateSectionActiveClasses() {
+      elements.sectionList.querySelectorAll(".section-card[data-index]").forEach(card => {
+        card.classList.toggle("active", Number(card.dataset.index) === state.activeIndex);
+      });
+    }
+
+    function getActiveSection() {
+      return state.sections[state.activeIndex] || null;
+    }
+
+    function playSection(index = state.activeIndex) {
+      const section = state.sections[index];
+      if (!section) return;
+      state.activeIndex = index;
+      applyActiveSpeed();
+      seekTo(section.start);
+      playVideo();
+    }
+
+    function seekActiveStart() {
+      const section = getActiveSection();
+      if (!section) return;
+      seekTo(section.start);
+    }
+
+    function getNudgeAmount() {
+      return Number(elements.nudgeAmount.value) || 0.01;
+    }
+
+    function nudgeSelected(delta) {
+      const target = elements.fineTarget.value;
+      if (target === "playhead") {
+        seekBy(delta);
+        return;
+      }
+
+      const section = getActiveSection();
+      if (!section) return;
+      updateSectionTime(state.activeIndex, target, section[target] + delta);
+    }
+
+    function handleKeyboardShortcuts(event) {
+      if (event.defaultPrevented || isTypingTarget(event.target)) return;
+
+      const key = event.key.toLowerCase();
+      if (key === " ") {
+        event.preventDefault();
+        togglePlayPause();
+      } else if (key === "p") {
+        event.preventDefault();
+        playSection();
+      } else if (key === "s") {
+        event.preventDefault();
+        if (state.activeIndex >= 0) setSectionBoundaryToNow(state.activeIndex, "start");
+      } else if (key === "e") {
+        event.preventDefault();
+        if (state.activeIndex >= 0) setSectionBoundaryToNow(state.activeIndex, "end");
+      } else if (key === ",") {
+        event.preventDefault();
+        seekBy(-0.1);
+      } else if (key === ".") {
+        event.preventDefault();
+        seekBy(0.1);
+      }
+    }
+
+    function isTypingTarget(target) {
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(target && target.tagName);
+    }
+
+    function startTicker() {
+      if (tickTimer) clearInterval(tickTimer);
+      tickTimer = setInterval(tick, 50);
+    }
+
+    function tick() {
+      const current = getCurrentPlayerTime({ fallback: 0 });
+      elements.currentTime.textContent = formatTime(current);
+
+      const section = getActiveSection();
+      if (!section || !state.loop || !playerReady || !isPlayerPlaying()) return;
+
+      if (current >= section.end - 0.015) {
+        seekTo(section.start);
+        playVideo();
+      }
+    }
+
+    function togglePlayPause() {
+      if (!playerReady) return;
+      if (isPlayerPlaying()) {
+        player.pauseVideo();
+      } else {
+        playVideo();
+      }
+    }
+
+    function playVideo() {
+      if (!playerReady) return;
+      applyActiveSpeed();
+      player.playVideo();
+    }
+
+    function isPlayerPlaying() {
+      return playerReady && player && player.getPlayerState && player.getPlayerState() === YT.PlayerState.PLAYING;
+    }
+
+    function getCurrentPlayerTime(options = {}) {
+      if (!playerReady || !player || !player.getCurrentTime) return options.fallback ?? 0;
+      return roundSeconds(player.getCurrentTime());
+    }
+
+    function seekBy(delta) {
+      seekTo(getCurrentPlayerTime() + delta);
+    }
+
+    function seekTo(time) {
+      if (!playerReady || !player || !player.seekTo) return;
+      player.seekTo(roundSeconds(time), true);
+    }
+
+    function applyActiveSpeed() {
+      if (!playerReady || !player || !player.setPlaybackRate) return;
+      const section = getActiveSection();
+      const desired = section ? roundSpeed(section.speed) : 1;
+      const available = typeof player.getAvailablePlaybackRates === "function" ? player.getAvailablePlaybackRates() : [];
+      const rate = available.length ? nearestNumber(available, desired) : desired;
+      player.setPlaybackRate(rate);
+    }
+
+    function nearestNumber(values, target) {
+      return values.reduce((nearest, value) => Math.abs(value - target) < Math.abs(nearest - target) ? value : nearest, values[0]);
+    }
+
+    async function copyShareUrl() {
+      renderShareUrl();
+      try {
+        await navigator.clipboard.writeText(elements.shareUrl.value);
+        setStatus(elements.shareStatus, "Share URL copied to clipboard.", "good");
+      } catch (_error) {
+        elements.shareUrl.focus();
+        elements.shareUrl.select();
+        setStatus(elements.shareStatus, "Clipboard unavailable. The URL is selected so you can copy it manually.", "bad");
+      }
+    }
+
+    function resetPageState() {
+      if (!confirm("Reset the video and all sections from this page URL?")) return;
+      if (player && player.stopVideo) player.stopVideo();
+      applyState(normalizeState({}), { loadVideo: false, syncUrl: true });
+      elements.player.innerHTML = `<div class="empty-player">Enter a YouTube URL or open a shared link to load a player.</div>`;
+      player = null;
+      playerReady = false;
+      setStatus(elements.videoStatus, "Page state reset. Nothing was stored in the browser.", "good");
+    }
+
+    function updateButtonStates() {
+      const hasActiveSection = state.activeIndex >= 0 && state.activeIndex < state.sections.length;
+      elements.nudgeDownButton.disabled = !hasActiveSection && elements.fineTarget.value !== "playhead";
+      elements.nudgeUpButton.disabled = !hasActiveSection && elements.fineTarget.value !== "playhead";
+      elements.seekActiveStartButton.disabled = !hasActiveSection;
+    }
+
+    function setStatus(element, message, kind = "") {
+      element.textContent = message;
+      element.className = `status ${kind}`.trim();
+    }
+
+    function getBaseUrl() {
+      return window.location.href.split("#")[0];
+    }
+
+    function escapeAttribute(value) {
+      return String(value).replace(/[&<>"]/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;"
+      })[character]);
+    }
+
+    window.__PracticeSectionsUtils = {
+      STATE_VERSION,
+      SHARE_HASH_KEY,
+      roundSeconds,
+      roundSpeed,
+      extractYouTubeId,
+      parseTimeInput,
+      formatTime,
+      normalizeState,
+      compactState,
+      inflateState,
+      encodeStateToHash,
+      decodeStateFromHash
+    };
+
+    boot();
+  </script>
+  <script src="https://www.youtube.com/iframe_api" async></script>
+</body>
+</html>
