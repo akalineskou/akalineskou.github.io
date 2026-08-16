@@ -38,7 +38,7 @@ const setVideoStatus = (message, kind = "") => {
     elements.videoStatus,
     message,
     kind,
-    VIDEO_STATUS_HIDE_AFTER_MS
+    kind === "bad" ? 0 : VIDEO_STATUS_HIDE_AFTER_MS
   );
 };
 

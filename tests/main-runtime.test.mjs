@@ -36,10 +36,14 @@ test("composition root boots against the static DOM contract", async () => {
   );
   const documentListeners = new Map();
   const windowListeners = new Map();
+  const timeoutCallbacks = new Map();
+  const clearedTimeouts = new Set();
+  let appendedScript;
+  let nextTimeout = 1;
 
   globalThis.document = {
     title: "",
-    head: { append() {} },
+    head: { append(script) { appendedScript = script; } },
     getElementById: id => elements.get(id) || null,
     addEventListener: (name, listener) => documentListeners.set(name, listener),
     removeEventListener: name => documentListeners.delete(name),
@@ -60,8 +64,12 @@ test("composition root boots against the static DOM contract", async () => {
   globalThis.cancelAnimationFrame = () => {};
   globalThis.setInterval = () => 1;
   globalThis.clearInterval = () => {};
-  globalThis.setTimeout = () => 1;
-  globalThis.clearTimeout = () => {};
+  globalThis.setTimeout = callback => {
+    const timer = nextTimeout++;
+    timeoutCallbacks.set(timer, callback);
+    return timer;
+  };
+  globalThis.clearTimeout = timer => clearedTimeouts.add(timer);
 
   await import("../src/main.js?runtime-smoke");
 
@@ -98,5 +106,19 @@ test("composition root boots against the static DOM contract", async () => {
   elements.get("videoInput").value = "abcdefghijk";
   elements.get("loadVideoButton").listeners.get("click")();
   assert.match(elements.get("videoStatus").textContent, /Video loaded/);
+  const successTimer = [...timeoutCallbacks.keys()].at(-1);
+  const timeoutCountBeforeError = timeoutCallbacks.size;
+
+  appendedScript.listeners.get("error")();
+  await new Promise(resolve => setImmediate(resolve));
+
+  const videoStatus = elements.get("videoStatus");
+  assert.equal(videoStatus.textContent, "Could not load the YouTube IFrame API.");
+  assert.equal(videoStatus.className, "status bad");
+  assert.equal(videoStatus.hidden, false);
+  assert.equal(clearedTimeouts.has(successTimer), true);
+  assert.equal(timeoutCallbacks.size, timeoutCountBeforeError, "errors must not receive a hide timer");
+  timeoutCallbacks.get(successTimer)();
+  assert.equal(videoStatus.textContent, "Could not load the YouTube IFrame API.");
 });
 
