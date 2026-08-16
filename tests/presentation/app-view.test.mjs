@@ -36,12 +36,12 @@ test("app view renders title, URL, controls, and readout", () => {
   view.renderVideoTitle(state);
   assert.equal(elements.videoTitleInput.hidden, false);
   assert.equal(elements.videoTitleInput.value, "Configured title");
-  assert.equal(documentObject.title, "YouTube Practice Sections: Configured title");
+  assert.equal(documentObject.title, "Configured title | YouTube Practice Sections");
   elements.videoTitleInput.value = "  raw focused text  ";
   state.videoTitle = "Normalized title";
   view.renderDocumentTitle(state);
   assert.equal(elements.videoTitleInput.value, "  raw focused text  ");
-  assert.equal(documentObject.title, "YouTube Practice Sections: Normalized title");
+  assert.equal(documentObject.title, "Normalized title | YouTube Practice Sections");
   view.renderVideoInput(state.videoId);
   assert.equal(elements.videoInput.value, "https://www.youtube.com/watch?v=abcdefghijk");
   view.renderControls(state);

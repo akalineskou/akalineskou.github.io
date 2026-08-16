@@ -4,7 +4,7 @@ import { formatYouTubeUrl } from "../infrastructure/url/youtube-url.js";
 
 export function createAppView({ elements, documentObject = document }) {
   function renderDocumentTitle(state) {
-    documentObject.title = state.videoTitle ? `${APP_TITLE}: ${state.videoTitle}` : APP_TITLE;
+    documentObject.title = state.videoTitle ? `${state.videoTitle} | ${APP_TITLE}` : APP_TITLE;
   }
 
   function renderVideoTitle(state) {
