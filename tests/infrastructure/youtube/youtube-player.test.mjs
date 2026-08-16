@@ -6,6 +6,22 @@ import {
   createYouTubePlayer
 } from "../../../src/infrastructure/youtube/youtube-player.js";
 
+test("player iframe always uses the canonical youtube.com host", async () => {
+  let options;
+  const api = {
+    Player: function Player(_id, playerOptions) { options = playerOptions; }
+  };
+  const player = createYouTubePlayer({
+    container: { id: "player", innerHTML: "" },
+    apiLoader: async () => api
+  });
+
+  await player.load("abcdefghijk");
+
+  assert.equal(PLAYER_HOST, "https://www.youtube.com");
+  assert.equal(options.host, "https://www.youtube.com");
+});
+
 test("YouTube adapter hides the global API behind a narrow player port", async () => {
   const calls = { load: [], play: 0, pause: 0, seek: [], rates: [] };
   let options;
@@ -39,7 +55,6 @@ test("YouTube adapter hides the global API behind a narrow player port", async (
   await player.load("abcdefghijk");
   assert.equal(container.innerHTML, "");
   assert.equal(options.host, PLAYER_HOST);
-  assert.equal(PLAYER_HOST, "https://www.youtube-nocookie.com");
   assert.equal(player.isReady(), false);
   player.play();
   assert.equal(calls.play, 0);

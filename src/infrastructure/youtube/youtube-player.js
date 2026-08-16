@@ -1,6 +1,6 @@
 import { loadYouTubeIframeApi } from "./iframe-api-loader.js";
 
-const PLAYER_HOST = "https://www.youtube-nocookie.com";
+const PLAYER_HOST = "https://www.youtube.com";
 const PLAYER_EVENTS = ["ready", "stateChange", "playbackRateChange", "error"];
 
 export function createYouTubePlayer({

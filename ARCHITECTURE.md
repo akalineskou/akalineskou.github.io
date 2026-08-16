@@ -72,7 +72,7 @@ Keep `main.js` as a composition root. New behavior belongs in the narrowest appl
 4. Event bindings translate DOM events into controller calls; they do not own state transitions.
 5. Controllers mutate the shared normalized state and request narrow rendering or full URL/render synchronization.
 
-The YouTube adapter dynamically appends the IFrame API script only after installing its readiness callback. It uses `youtube-nocookie.com` as the player host and exposes a narrow player interface. Loading failures are surfaced through the video status UI.
+The YouTube adapter dynamically appends the IFrame API script only after installing its readiness callback. It always uses `https://www.youtube.com` as the player host and exposes a narrow player interface; supported alternate hosts remain valid video URL inputs. Using the `youtube.com` host rather than `youtube-nocookie.com` is a hard requirement so YouTube login cookies are available to the embedded player. Loading failures are surfaced through the video status UI.
 
 ## URL-only state
 
