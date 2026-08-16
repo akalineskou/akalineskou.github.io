@@ -412,7 +412,7 @@
     <section class="stack" aria-label="Player and section controls">
       <div class="panel stack">
         <div class="field">
-          <label for="videoInput">YouTube URL or video ID</label>
+          <label for="videoInput">YouTube URL</label>
           <div class="row">
             <input id="videoInput" class="grow" type="text" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" autocomplete="off" spellcheck="false">
             <button id="loadVideoButton" class="primary" type="button">Load video</button>
@@ -579,6 +579,11 @@
     function sanitizeYouTubeId(value) {
       const match = String(value || "").match(/[a-zA-Z0-9_-]{11}/);
       return match ? match[0] : "";
+    }
+
+    function formatYouTubeUrl(videoId) {
+      const sanitizedId = sanitizeYouTubeId(videoId);
+      return sanitizedId ? `https://www.youtube.com/watch?v=${sanitizedId}` : "";
     }
 
     function isYouTubeHost(host) {
@@ -764,7 +769,7 @@
     function boot() {
       try {
         applyState(decodeStateFromHash(window.location.hash), { loadVideo: true, syncUrl: false });
-        setStatus(elements.videoStatus, state.videoId ? "Loaded state from the URL." : "Paste a YouTube URL or video ID to begin.", state.videoId ? "good" : "");
+        setStatus(elements.videoStatus, state.videoId ? "Loaded state from the URL." : "Paste a YouTube URL to begin.", state.videoId ? "good" : "");
       } catch (error) {
         setStatus(elements.videoStatus, `Could not read shared URL: ${error.message}`, "bad");
         applyState(normalizeState({}), { loadVideo: false, syncUrl: true });
@@ -826,7 +831,7 @@
       state.activeIndex = normalized.activeIndex;
       state.sections = normalized.sections;
 
-      elements.videoInput.value = state.videoId;
+      elements.videoInput.value = formatYouTubeUrl(state.videoId);
       elements.loopToggle.checked = state.loop;
 
       if (options.loadVideo && state.videoId) {
@@ -840,12 +845,12 @@
     function loadVideoFromInput() {
       const videoId = extractYouTubeId(elements.videoInput.value);
       if (!videoId) {
-        setStatus(elements.videoStatus, "That does not look like a YouTube URL or 11-character video ID.", "bad");
+        setStatus(elements.videoStatus, "That does not look like a valid YouTube URL.", "bad");
         return;
       }
 
       state.videoId = videoId;
-      elements.videoInput.value = videoId;
+      elements.videoInput.value = formatYouTubeUrl(videoId);
       loadVideoById(videoId);
       setStatus(elements.videoStatus, "Video loaded. Add or play a section to begin practicing.", "good");
       syncAndRender();
@@ -864,7 +869,7 @@
 
       elements.player.innerHTML = "";
       player = new YT.Player("player", {
-        host: "https://www.youtube-nocookie.com",
+        host: "https://www.youtube.com",
         videoId,
         playerVars: {
           playsinline: 1,

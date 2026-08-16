@@ -4,7 +4,7 @@ A self-contained static `index.html` page for practicing music with YouTube vide
 
 ## Features
 
-- Load a YouTube URL or 11-character video ID.
+- Load a YouTube URL and keep the canonical full `youtube.com` URL visible in the input.
 - Add practice sections from the current playhead.
 - Edit section names, start times, end times, and playback speeds.
 - Times support high-precision milliseconds and flexible formats:

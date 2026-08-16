@@ -38,6 +38,7 @@ this.utils = {
   roundSeconds,
   roundSpeed,
   extractYouTubeId,
+  formatYouTubeUrl,
   parseTimeInput,
   formatTime,
   normalizeState,
@@ -49,6 +50,7 @@ this.utils = {
 
 const {
   extractYouTubeId,
+  formatYouTubeUrl,
   parseTimeInput,
   formatTime,
   normalizeState,
@@ -63,6 +65,11 @@ assert.equal(extractYouTubeId("https://youtu.be/dQw4w9WgXcQ?si=abc"), "dQw4w9WgX
 assert.equal(extractYouTubeId("https://www.youtube.com/embed/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
 assert.equal(extractYouTubeId("https://notyoutube.com/watch?v=dQw4w9WgXcQ"), "");
 assert.equal(extractYouTubeId("not a video"), "");
+assert.equal(formatYouTubeUrl("dQw4w9WgXcQ"), "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+assert.equal(formatYouTubeUrl(""), "");
+
+const formattedInputAssignments = indexHtml.match(/elements\.videoInput\.value = formatYouTubeUrl\((?:state\.)?videoId\);/g) || [];
+assert.equal(formattedInputAssignments.length, 2, "direct and shared-state loads should display full YouTube URLs");
 
 assert.equal(parseTimeInput("83.250"), 83.25);
 assert.equal(parseTimeInput("1:23.250"), 83.25);
