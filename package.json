@@ -5,9 +5,11 @@
   "description": "Static URL-only YouTube practice section looper for GitHub Pages.",
   "type": "module",
   "scripts": {
-    "test": "node tests/url-state.test.mjs && node tests/layout.test.mjs && node tests/video-title.test.mjs && node tests/section-actions.test.mjs && node tests/status.test.mjs && node tests/scroll.test.mjs && node tests/playback.test.mjs && node tests/playback-speed.test.mjs && node tests/keyboard-shortcuts.test.mjs && node tests/fine-tune-expansion.test.mjs && node tests/section-name.test.mjs && node tests/section-time-input.test.mjs"
+    "check": "find src tests -type f \\( -name '*.js' -o -name '*.mjs' \\) -print0 | xargs -0 -n1 node --check",
+    "test": "node --test",
+    "test-coverage": "node --test --experimental-test-coverage --test-coverage-include='src/**/*.js' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   }
 }

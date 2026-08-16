@@ -1,108 +1,149 @@
-# Architecture Notes for Future Agents
+# Architecture Notes
 
-## Goal
+## Goal and constraints
 
-This is intentionally a greenfield, static-only GitHub Pages app. The user wanted a single webpage (`index.html`) that can be uploaded and used without an application server. All practice data must be shareable through the URL and must not depend on browser storage.
+This is a static-only GitHub Pages application for practicing YouTube sections. It has no build step, runtime package dependency, application server, or browser storage. Practice data is shareable through the URL hash.
 
-## Files
+The application uses native browser ES modules and an external stylesheet. Deploy `index.html`, the complete `resources/` folder, and the complete `src/` tree together, and use an HTTP static server for local development.
 
-- `index.html` — complete application: markup, CSS, JavaScript, YouTube IFrame API integration, URL codec, and UI behavior.
-- `README.md` — usage, deployment, and test instructions.
-- `ARCHITECTURE.md` — this handoff file.
-- `package.json` — no runtime dependencies; provides `npm test`.
-- `tests/url-state.test.mjs` — extracts and tests the URL-state utility block from `index.html`.
-- `tests/layout.test.mjs` — checks responsive panel placement and collapsible-section markup contracts.
-- `tests/section-actions.test.mjs` — tests section insertion, deletion, and neighbor-boundary behavior.
-- `tests/status.test.mjs` — tests cancellable, element-specific temporary status messages.
-- `tests/scroll.test.mjs` — tests post-render scrolling to newly created sections.
-- `tests/playback.test.mjs` — tests section playback and automatic loop enabling.
-- `tests/playback-speed.test.mjs` — tests section-speed enablement, exact `1×` bypass, and speed-selection auto-enable behavior.
-- `tests/keyboard-shortcuts.test.mjs` — tests focused-only time nudging and visible-panel amount shortcuts with editable-target protection.
-- `tests/fine-tune-expansion.test.mjs` — tests Fine Tune amount selection, clamped keyboard stepping, and exclusive active section expansion.
-- `tests/section-name.test.mjs` — tests immediate, focus-preserving section-summary name updates.
-- `tests/section-time-input.test.mjs` — tests immediate manual boundary summaries without replacing the focused input value.
-- `tests/video-title.test.mjs` — tests configured-title precedence, metadata capture, input visibility, and browser-title updates.
+## Structure
 
-## Design decisions
+```text
+resources/
+  favicon.svg                 Page favicon
+  styles.css                  Application styles and responsive layout
 
-### Single-file app
-
-The app keeps all browser code in `index.html` so it can be uploaded directly to GitHub Pages with no bundler or asset pipeline. This also makes shared URLs stable because there are no generated filenames.
-
-### URL-only state
-
-Practice data is encoded in the URL hash under `#ytp=...`.
-
-The codec lives inside the marked block:
-
-```js
-/* URL_STATE_UTILS_START */
-// URL-state utility functions live here.
-/* URL_STATE_UTILS_END */
+src/
+  application/
+    app-controller.js       Application startup, state application, and lifecycle
+    playback-controller.js  Selection, playback, speed, ticker, loop/advance rules
+    section-controller.js   Section editing, expansion, insertion, deletion, nudging
+    settings-controller.js  Playback-option use cases
+    share-controller.js     URL synchronization and clipboard workflow
+    video-controller.js     Video loading and title-metadata precedence
+  config/
+    constants.js            Schema/UI constants and selectable values
+  domain/
+    practice-state.js       State normalization and in-place replacement
+    section.js              Section entities and boundary invariants
+    speed.js                Speed normalization and nearest-rate selection
+    time.js                 Time parsing, formatting, and precision
+    video-id.js             YouTube ID sanitization
+    video-title.js          Title normalization
+  infrastructure/
+    browser/location.js     Hash/history adapter
+    url/state-codec.js      Compact v1 Base64URL codec
+    url/youtube-url.js      YouTube URL parsing/formatting
+    youtube/iframe-api-loader.js
+    youtube/youtube-player.js
+  presentation/
+    app-view.js             Top-level title/control/readout rendering
+    dom-elements.js         Required static-element registry
+    event-bindings.js       DOM-event-to-use-case translation
+    fine-tune-control.js    Runtime-only nudge amount selection
+    formatters.js           Escaped labels and display formatting
+    keyboard-shortcuts.js   Keyboard policy
+    panel-layout.js         Responsive panel-height behavior
+    section-scroller.js     Post-render section scrolling
+    section-view.js         Section HTML and narrow live updates
+    status-presenter.js     Element-specific cancellable statuses
+  main.js                   Composition root
 ```
 
-The test harness extracts this block, so keep those markers if the codec changes.
+`tests/` mirrors these source folders. `tests/main.test.mjs` verifies the deployment entry point, static markup, responsive CSS, no-storage rule, and mirrored folder contract.
 
-The encoded compact object shape is:
+## Dependency and design rules
+
+The refactor favors SOLID principles without introducing classes where functions and injected ports are simpler:
+
+1. **Single responsibility:** domain rules, application use cases, infrastructure effects, and DOM rendering live in separate modules.
+2. **Open/closed:** controllers consume narrow ports (`player`, `location`, `view`, scheduler callbacks), so adapters can change without rewriting use cases.
+3. **Liskov substitution:** test fakes implement the same small player/location/view contracts as browser adapters.
+4. **Interface segregation:** controllers receive only operations they use rather than `window`, `document`, or the YouTube global.
+5. **Dependency inversion:** `main.js` constructs concrete adapters and injects them. Application controllers do not read browser globals directly.
+
+Keep `main.js` as a composition root. New behavior belongs in the narrowest applicable domain/controller/view/adapter module, not in `main.js`.
+
+## Runtime flow
+
+1. `index.html` loads `resources/styles.css` and `src/main.js`; it contains no inline CSS or application JavaScript.
+2. `main.js` resolves required DOM elements and constructs state, views, adapters, and controllers.
+3. `app-controller.start()` decodes the current hash, applies normalized state, binds DOM/player/hash listeners, starts responsive layout observation, and starts the 50 ms ticker.
+4. Event bindings translate DOM events into controller calls; they do not own state transitions.
+5. Controllers mutate the shared normalized state and request narrow rendering or full URL/render synchronization.
+
+The YouTube adapter dynamically appends the IFrame API script only after installing its readiness callback. It uses `youtube-nocookie.com` as the player host and exposes a narrow player interface. Loading failures are surfaced through the video status UI.
+
+## URL-only state
+
+State is encoded under `#ytp=...` as compact Base64URL JSON. The v1 shape is:
 
 ```js
 const compactState = {
-  v: 1,              // schema version
-  y: "VIDEO_ID",     // YouTube video ID
-  t: "Video title",  // optional: YouTube title; omitted when empty
-  l: 1,              // loop enabled, 1 or 0
-  n: 1,              // optional: move to next section when enabled
-  r: 0,              // optional: disable section-speed control; omission means enabled
-  s: [               // sections
-    ["", 12.345, 18.9, 0.75] // name may be empty
+  v: 1,
+  y: "VIDEO_ID",
+  t: "Video title", // optional
+  l: 1,
+  n: 1,             // optional; move-next enabled
+  r: 0,             // optional; section-speed control disabled
+  s: [
+    ["", 12.345, 18.9, 0.75]
   ]
 };
 ```
 
-The hash is used instead of query parameters so GitHub Pages does not need to process anything server-side and so opening a shared URL loads the app normally before client-side decoding.
+Compatibility rules:
 
-The active section index is runtime-only UI state. It is not encoded, and legacy `a` fields are ignored so shared URLs always open without selecting a section.
+- Preserve schema version `1`, tuple positions, and omission defaults unless intentionally introducing a migration.
+- Active selection is never encoded; legacy `a` fields are ignored.
+- Omitted `r` means section-speed control is enabled.
+- Titles require a valid video ID.
+- Times are normalized to non-negative milliseconds.
+- Do not add `localStorage`, `sessionStorage`, cookies, or IndexedDB for practice data.
 
-### No browser storage
+Runtime-only values include active selection, expanded section IDs, Fine Tune amount, player readiness, boundary locks, pending metadata, timers, observers, and animation frames.
 
-Do not add `localStorage`, `sessionStorage`, cookies, or IndexedDB for practice data. If a future feature needs persistence, prefer extending the hash schema or adding explicit import/export text that the user controls.
+## Important behavior contracts
 
-### Time precision
+- Full section-list rendering is appropriate after structural changes. Live name/time input uses narrow `textContent`/value updates to preserve focus, selection, and raw user text.
+- Dynamic state rendered into HTML must be escaped. Narrow text updates must use `textContent`.
+- Expanding a section is exclusive and makes it active; collapsing it does not clear active selection.
+- Adding after the first section starts at the final displayed section's end. Inserting starts at the selected section's end without moving later sections.
+- Deletion expands and activates the final remaining section.
+- Playing a section enables looping. Automatic advancement does not.
+- Move-next takes precedence before the final section; the final section loops only when looping is enabled.
+- A 500 ms destination lock prevents stale pre-seek playheads from immediately crossing another boundary.
+- Disabling section speed applies exact `1×` without changing saved speeds. Selecting a speed re-enables speed control.
+- Configured/manual titles are never overwritten by player metadata; metadata must match both the pending and current video IDs.
+- Successful temporary statuses cancel prior timers on the same element. Persistent errors have no hide timer.
+- Share hash updates use `history.replaceState`; the hash-assignment fallback suppresses only its own `hashchange` event.
 
-Times are normalized to milliseconds (`0.001s`) by `roundSeconds`. Inputs accept raw seconds or clock notation. The ticker runs every 50 ms and can advance to the next displayed section or loop the active section. Move-to-next takes precedence before the final section; the final section loops only when looping is enabled.
+## Extension guidance
 
-### YouTube integration
+- New deterministic business rules: `src/domain/` with direct unit tests in `tests/domain/`.
+- New state-changing use cases: `src/application/`, depending on injected narrow ports.
+- Browser, URL, or third-party effects: `src/infrastructure/` behind an adapter.
+- DOM rendering or interaction policy: `src/presentation/`.
+- New source folders must be mirrored under `tests/`; the structure contract enforces this.
+- Add required static element IDs to both `index.html` and `ELEMENT_IDS`.
 
-The app uses the public YouTube IFrame API and requests the privacy-enhanced embed host (`youtube-nocookie.com`) for the player iframe. When a configuration has no saved title, matching player metadata supplies one; a configured or manually edited title is never overwritten. Section-speed control is enabled by default; disabling it applies exactly `1×` without mutating stored section speeds. Selecting a section speed re-enables control. If a video exposes a limited set of playback rates, enabled section speeds use the nearest available rate.
-
-## Safe extension points
-
-- Add global metadata through carefully extended optional top-level fields in `compactState` and `inflateState`; preserve omission defaults for legacy v1 URLs.
-- Add section metadata by appending values to each section tuple; preserve existing tuple positions for backwards compatibility.
-- Add UI features by updating `renderSections`, `handleSectionInput`, and `handleSectionClick` together.
-- If moving JavaScript out of `index.html`, update tests and note that the user originally asked for an uploadable `index.html` page.
-
-## Verification checklist after changes
+## Verification
 
 Run:
 
 ```zsh
+npm run check
 npm test
+npm run test-coverage
 ```
 
-Also manually verify in a browser:
+Coverage uses Node 24's built-in V8 test coverage. Every `src/**/*.js` module must appear in the report, and the enforced aggregate line, function, and branch thresholds are all 100%; because no file can exceed 100%, an aggregate 100% also requires every reported source module to be 100%.
 
-1. Load a YouTube video.
-2. Add a first section at the playhead, then move the playhead and confirm later Add actions start from the final section’s end instead.
-3. Confirm new sections show only `1.`, `2.`, etc.; type and clear a name while verifying summaries, the active selector, and shared URLs update immediately.
-4. Verify fixed-width Start/End inputs, Now and neighbor buttons immediately after them, and Go aligned at the far right at desktop and narrow widths.
-5. Rename a section and confirm its summary and active-section option update while typing without losing focus.
-6. Verify `0.1s` is the default Fine Tune amount, `0.05s` is reachable below it, and “Press - / + to decrease / increase the amount.” appears on its own help line.
-7. Confirm the compact `12rem` Active section control stays right-aligned, Current time takes the main row space, and all playback checkboxes span the row below across desktop and narrow widths.
-8. Disable Use section speed and confirm playback applies `1×` while saved section values remain unchanged; selecting a speed must re-enable it.
-9. Confirm Delete follows New section after and is aligned to the right; after deletion, the final remaining section should expand and become active.
-10. Confirm the URL/title inputs and Load video button remain on one row, including when a title is visible.
-11. Select a section and confirm the shared hash does not change or contain an `a` field.
-12. Copy a URL and confirm the success message disappears after about three seconds; clipboard errors should remain visible.
-13. Confirm the Share panel has no heading or help text and keeps Copy URL to the right of the URL textarea.
-14. Copy enabled and disabled share URLs, verify their state in a fresh tab, and confirm a legacy URL defaults speed control to enabled.
+### Test coverage policy
+
+- Test coverage must always remain at **100% for lines, functions, and branches** across every `src/**/*.js` module.
+- Every production-code change must add or update tests for all new and changed behavior, including error paths and boundary cases.
+- Never lower the thresholds, exclude production modules, or remove assertions merely to make the coverage command pass.
+- A change is not complete until `npm run test-coverage` succeeds with every source module reporting 100% in all three metrics.
+
+For manual browser verification, serve the repository over HTTP and check video loading, section add/insert/delete, focused live edits, Fine Tune shortcuts, speed toggling, loop/advance transitions, title metadata precedence, copied URL restoration, responsive section scrolling, and clipboard fallback.
