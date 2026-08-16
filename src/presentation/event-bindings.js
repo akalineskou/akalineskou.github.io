@@ -12,6 +12,7 @@ export function createEventBindings({
   handleKeyboardShortcuts
 }) {
   const removeListeners = [];
+  const playerElementId = elements.player?.id;
   let bound = false;
 
   function listen(target, eventName, listener) {
@@ -85,6 +86,17 @@ export function createEventBindings({
     if (sectionCard) sectionController.activateFromFocus(Number(sectionCard.dataset.index));
   }
 
+  function handleDocumentPointerDown(event) {
+    const activeElement = documentObject.activeElement;
+    if (
+      activeElement?.tagName === "IFRAME"
+      && activeElement.id === playerElementId
+      && event.target !== activeElement
+    ) {
+      activeElement.blur();
+    }
+  }
+
   function bind() {
     if (bound) return unbind;
     bound = true;
@@ -115,6 +127,7 @@ export function createEventBindings({
     listen(elements.sectionList, "change", handleSectionChange);
     listen(elements.sectionList, "click", handleSectionClick);
     listen(elements.sectionList, "focusin", handleSectionFocus);
+    listen(documentObject, "pointerdown", handleDocumentPointerDown);
     listen(documentObject, "keydown", handleKeyboardShortcuts);
 
     return unbind;

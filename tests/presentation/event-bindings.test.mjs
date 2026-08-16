@@ -141,6 +141,7 @@ function makeEventTarget(initial = {}) {
 test("bind wires every static control, is idempotent, and removes every listener", async () => {
   const calls = [];
   const elementNames = [
+    "player",
     "loadVideoButton", "videoInput", "videoTitleInput", "playPauseButton",
     "loopToggle", "useSectionSpeedToggle", "moveToNextSectionToggle",
     "activeSectionSelect", "addSectionButton", "copyShareButton",
@@ -148,6 +149,7 @@ test("bind wires every static control, is idempotent, and removes every listener
     "nudgeEndDownButton", "nudgeEndUpButton", "sectionList"
   ];
   const elements = Object.fromEntries(elementNames.map(name => [name, makeEventTarget()]));
+  elements.player.id = "player";
   Object.assign(elements.videoInput, { value: "video-url" });
   Object.assign(elements.videoTitleInput, { value: "Video title" });
   Object.assign(elements.loopToggle, { checked: true });
@@ -193,6 +195,26 @@ test("bind wires every static control, is idempotent, and removes every listener
 
   const unbind = bindings.bind();
   assert.equal(bindings.bind(), unbind, "a second bind must not duplicate listeners");
+  assert.equal(documentObject.listeners.has("pointerdown"), true);
+
+  let blurCalls = 0;
+  const playerIframe = {
+    tagName: "IFRAME",
+    id: "player",
+    blur: () => { blurCalls += 1; }
+  };
+  documentObject.activeElement = playerIframe;
+  documentObject.dispatch("pointerdown", { target: {} });
+  assert.equal(blurCalls, 1);
+  documentObject.dispatch("pointerdown", { target: playerIframe });
+  documentObject.activeElement = { tagName: "IFRAME", id: "other", blur: () => { blurCalls += 1; } };
+  documentObject.dispatch("pointerdown", { target: {} });
+  documentObject.activeElement = { tagName: "BUTTON", blur: () => { blurCalls += 1; } };
+  documentObject.dispatch("pointerdown", { target: {} });
+  documentObject.activeElement = null;
+  documentObject.dispatch("pointerdown", { target: {} });
+  assert.equal(blurCalls, 1, "inside clicks, other iframes, and non-player elements must retain focus");
+
   elements.loadVideoButton.dispatch("click");
   elements.videoInput.dispatch("keydown", { key: "x" });
   elements.videoInput.dispatch("keydown", { key: "Enter" });
@@ -229,6 +251,7 @@ test("bind wires every static control, is idempotent, and removes every listener
   assert.equal(Object.values(elements).every(element => element.listeners.size === 0), true);
   bindings.unbind();
   bindings.bind();
+  assert.equal(documentObject.listeners.has("pointerdown"), true, "outside-pointer handling can be installed again");
   assert.equal(documentObject.listeners.has("keydown"), true, "bindings can be installed again after removal");
   bindings.unbind();
 });
