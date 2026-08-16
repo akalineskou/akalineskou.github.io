@@ -1,0 +1,6 @@
+tests/**/* export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+ARCHITECTURE.md export-ignore
+LICENSE export-ignore
+README.md export-ignore
