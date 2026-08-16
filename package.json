@@ -5,7 +5,7 @@
   "description": "Static URL-only YouTube practice section looper for GitHub Pages.",
   "type": "module",
   "scripts": {
-    "test": "node tests/url-state.test.mjs"
+    "test": "node tests/url-state.test.mjs && node tests/layout.test.mjs && node tests/video-title.test.mjs && node tests/section-actions.test.mjs && node tests/status.test.mjs && node tests/scroll.test.mjs && node tests/playback.test.mjs && node tests/playback-speed.test.mjs && node tests/keyboard-shortcuts.test.mjs && node tests/fine-tune-expansion.test.mjs && node tests/section-name.test.mjs && node tests/section-time-input.test.mjs"
   },
   "engines": {
     "node": ">=18"

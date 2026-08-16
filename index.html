@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="A URL-only YouTube practice looper for music sections.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <title>YouTube Practice Sections</title>
   <style>
     :root {
@@ -20,6 +21,8 @@
       --border: #334155;
       --shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
       --radius: 16px;
+      --player-panel-height: none;
+      --time-input-width: 10rem;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -124,14 +127,8 @@
 
     h2,
     h3 {
-      margin-top: 0;
+      margin: 0;
       letter-spacing: -0.025em;
-    }
-
-    .subtitle {
-      max-width: 70ch;
-      color: var(--muted);
-      font-size: 1.05rem;
     }
 
     .grid {
@@ -142,6 +139,20 @@
       padding-bottom: 2rem;
     }
 
+    .workspace-column {
+      min-width: 0;
+      align-content: start;
+    }
+
+    .sections-panel {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 1rem;
+      min-height: 0;
+      max-height: var(--player-panel-height, none);
+      overflow: hidden;
+    }
+
     .panel {
       border: 1px solid rgba(148, 163, 184, 0.2);
       border-radius: var(--radius);
@@ -149,6 +160,15 @@
       box-shadow: var(--shadow);
       padding: 1rem;
       backdrop-filter: blur(18px);
+    }
+
+    .panel p {
+      margin: 0;
+    }
+
+    .sections-panel > .row > .grow {
+      display: grid;
+      gap: 0.35rem;
     }
 
     .stack {
@@ -165,6 +185,36 @@
 
     .row > .grow {
       flex: 1 1 18rem;
+    }
+
+    .video-load-row {
+      flex-wrap: nowrap;
+    }
+
+    .video-load-row > .grow {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .video-load-row > #videoInput {
+      flex-grow: 1.25;
+    }
+
+    .video-load-row > button {
+      flex: 0 0 auto;
+    }
+
+    .share-url-row {
+      flex-wrap: nowrap;
+    }
+
+    .row.share-url-row > textarea {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .row.share-url-row > button {
+      flex: 0 0 auto;
     }
 
     .field {
@@ -186,6 +236,11 @@
       font-size: 0.87rem;
     }
 
+    .fine-tune-amount-hint {
+      display: block;
+      margin-top: 0.35rem;
+    }
+
     .status {
       display: block;
       min-height: 1.35rem;
@@ -199,6 +254,11 @@
 
     .status.bad {
       color: var(--danger);
+    }
+
+    #videoStatus:empty,
+    #shareStatus:empty {
+      display: none;
     }
 
     .player-wrap {
@@ -228,13 +288,46 @@
     .time-readout {
       display: flex;
       gap: 0.65rem;
-      align-items: baseline;
+      align-items: flex-start;
       justify-content: space-between;
       flex-wrap: wrap;
       border: 1px solid var(--border);
       border-radius: 12px;
       background: rgba(2, 6, 23, 0.65);
       padding: 0.8rem;
+    }
+
+    .current-time-block,
+    .active-section-block {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .current-time-block {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+
+    .active-section-block {
+      flex: 0 0 12rem;
+      min-width: 0;
+      max-width: 100%;
+      margin-left: auto;
+    }
+
+    .section-end-options {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+      flex-wrap: wrap;
+      flex: 1 0 100%;
+    }
+
+    .current-time-row {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .big-time {
@@ -244,17 +337,16 @@
       letter-spacing: -0.04em;
     }
 
-    .active-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
+    .active-section-select {
+      width: 100%;
       border: 1px solid rgba(56, 189, 248, 0.4);
-      border-radius: 999px;
       background: rgba(56, 189, 248, 0.1);
       color: #bae6fd;
-      padding: 0.25rem 0.55rem;
-      font-size: 0.82rem;
-      font-weight: 750;
+      font-weight: 700;
+    }
+
+    .fine-panel[hidden] {
+      display: none;
     }
 
     .toggle {
@@ -277,6 +369,11 @@
     .section-list {
       display: grid;
       gap: 0.85rem;
+      align-content: start;
+      min-height: 0;
+      overflow-y: auto;
+      padding-right: 0.3rem;
+      scrollbar-gutter: stable;
     }
 
     .section-card {
@@ -286,22 +383,88 @@
       padding: 0.85rem;
     }
 
+    .section-card.collapsed {
+      padding: 0.45rem 0.55rem;
+    }
+
     .section-card.active {
       border-color: var(--accent);
       box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.32), 0 16px 35px rgba(2, 132, 199, 0.16);
     }
 
-    .section-header {
+    .section-summary {
       display: grid;
-      grid-template-columns: minmax(10rem, 1fr) 6.5rem;
+      grid-template-columns: minmax(0, 1fr) auto;
       gap: 0.65rem;
-      align-items: end;
-      margin-bottom: 0.7rem;
+      align-items: center;
+    }
+
+    .section-toggle {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 0.55rem;
+      align-items: center;
+      min-width: 0;
+      border-color: transparent;
+      background: transparent;
+      padding: 0.35rem;
+      text-align: left;
+    }
+
+    .section-toggle-icon {
+      color: var(--accent);
+      font-size: 0.8rem;
+      transition: transform 120ms ease;
+    }
+
+    .section-toggle[aria-expanded="true"] .section-toggle-icon {
+      transform: rotate(90deg);
+    }
+
+    .section-summary-text {
+      display: grid;
+      min-width: 0;
+    }
+
+    .section-summary-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .section-summary-time {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+
+    .section-summary-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .section-summary-controls select {
+      width: 5.5rem;
+      padding: 0.42rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .section-details {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.8rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.8rem;
+    }
+
+    .section-details[hidden] {
+      display: none;
     }
 
     .section-fields {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: 0.65rem;
     }
 
@@ -312,11 +475,30 @@
       margin-top: 0.7rem;
     }
 
+    .section-actions > [data-action="delete"] {
+      margin-left: auto;
+    }
+
     .time-input-wrap {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: var(--time-input-width) minmax(0, 1fr);
       gap: 0.35rem;
       align-items: center;
+    }
+
+    .time-input-wrap input[data-time-input="true"] {
+      width: var(--time-input-width);
+    }
+
+    .time-input-actions {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .time-input-actions > [data-action^="seek-to-"] {
+      margin-left: auto;
     }
 
     .time-input-wrap input.invalid {
@@ -324,11 +506,43 @@
       box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.12);
     }
 
+    .fine-header,
+    .fine-row {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .fine-header {
+      flex-wrap: wrap;
+    }
+
+    .nudge-amount-buttons {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nudge-amount-buttons button {
+      padding: 0.42rem 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .nudge-amount-buttons button[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.16);
+      color: #bae6fd;
+    }
+
     .fine-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 0.65rem;
-      align-items: end;
+    }
+
+    .fine-row > span {
+      font-weight: 700;
     }
 
     .fine-buttons {
@@ -370,15 +584,44 @@
       text-align: center;
     }
 
-    .footer-note {
-      color: var(--muted);
-      font-size: 0.84rem;
-      margin: 0;
-    }
-
     @media (max-width: 980px) {
       .grid {
         grid-template-columns: 1fr;
+        grid-template-areas:
+          "player"
+          "sections"
+          "fine"
+          "support";
+      }
+
+      .workspace-column {
+        display: contents;
+      }
+
+      .player-panel {
+        grid-area: player;
+      }
+
+      .sections-panel {
+        grid-area: sections;
+      }
+
+      .fine-panel {
+        grid-area: fine;
+      }
+
+      .supporting-panels {
+        grid-area: support;
+      }
+
+      .sections-panel {
+        max-height: none;
+        overflow: visible;
+      }
+
+      .section-list {
+        overflow: visible;
+        padding-right: 0;
       }
     }
 
@@ -388,16 +631,39 @@
         width: min(100% - 1rem, 1240px);
       }
 
-      .section-header,
-      .section-fields,
       .fine-grid,
       .kbd-list {
         grid-template-columns: 1fr;
       }
 
+      .time-input-wrap {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .current-time-block {
+        flex-basis: 100%;
+        min-width: 0;
+      }
+
+      .section-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .section-summary-controls {
+        justify-content: space-between;
+      }
+
       .row > button,
       .row > .grow {
         flex-basis: 100%;
+      }
+
+      .video-load-row > button {
+        flex: 0 0 auto;
+      }
+
+      .video-load-row > .grow {
+        flex-basis: 0;
       }
     }
   </style>
@@ -405,16 +671,16 @@
 <body>
   <header>
     <h1>YouTube Practice Sections</h1>
-    <p class="subtitle">Load a YouTube video, mark precise practice sections, loop them at custom speeds, and share everything through the page URL. This app does not save your practice data in browser storage.</p>
   </header>
 
   <main class="grid">
-    <section class="stack" aria-label="Player and section controls">
-      <div class="panel stack">
+    <div class="stack workspace-column player-column">
+      <section id="playerPanel" class="panel stack player-panel" aria-label="Player controls">
         <div class="field">
           <label for="videoInput">YouTube URL</label>
-          <div class="row">
+          <div class="row video-load-row">
             <input id="videoInput" class="grow" type="text" placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ" autocomplete="off" spellcheck="false">
+            <input id="videoTitleInput" class="grow" type="text" aria-label="YouTube title" placeholder="YouTube title" maxlength="200" autocomplete="off" hidden>
             <button id="loadVideoButton" class="primary" type="button">Load video</button>
           </div>
           <output id="videoStatus" class="status" aria-live="polite"></output>
@@ -425,103 +691,105 @@
         </div>
 
         <div class="time-readout">
-          <div>
+          <div class="current-time-block">
             <div class="label">Current time</div>
-            <div id="currentTime" class="big-time">00:00.000</div>
+            <div class="current-time-row">
+              <div id="currentTime" class="big-time">00:00.000</div>
+              <button id="playPauseButton" type="button">Play / Pause</button>
+            </div>
           </div>
-          <div>
-            <div class="label">Active section</div>
-            <div id="activeSectionLabel" class="active-badge">None</div>
-          </div>
-        </div>
-
-        <div class="row" aria-label="Playback controls">
-          <button id="playPauseButton" type="button">Play / Pause</button>
-          <button id="seekBackButton" class="small" type="button">−5s</button>
-          <button id="seekForwardButton" class="small" type="button">+5s</button>
-          <label class="toggle">
-            <input id="loopToggle" type="checkbox" checked>
-            Loop active section
-          </label>
-        </div>
-      </div>
-
-      <div class="panel stack">
-        <div class="row">
-          <div class="grow">
-            <h2>Practice sections</h2>
-            <p class="hint">Times accept seconds or clock notation: <code>83.250</code>, <code>1:23.250</code>, or <code>01:02:03.250</code>.</p>
-          </div>
-          <button id="addSectionButton" class="primary" type="button">Add section at playhead</button>
-        </div>
-
-        <div id="sectionList" class="section-list" aria-live="polite"></div>
-      </div>
-    </section>
-
-    <aside class="stack" aria-label="Sharing and fine tuning">
-      <div class="panel stack">
-        <h2>Share / export</h2>
-        <p class="hint">The video ID, section names, start/end times, speeds, loop setting, and active section are encoded into the URL hash.</p>
-        <div class="field">
-          <label for="shareUrl">Current share URL</label>
-          <textarea id="shareUrl" readonly spellcheck="false"></textarea>
-        </div>
-        <div class="row">
-          <button id="copyShareButton" class="primary" type="button">Copy URL</button>
-          <button id="openShareButton" type="button">Open URL</button>
-          <button id="resetButton" class="danger" type="button">Reset page state</button>
-        </div>
-        <output id="shareStatus" class="status" aria-live="polite"></output>
-      </div>
-
-      <div class="panel stack">
-        <h2>Fine tune</h2>
-        <p class="hint">Select a section, choose start or end, then nudge by milliseconds for tight loops.</p>
-        <div class="fine-grid">
-          <div class="field">
-            <label for="fineTarget">Target</label>
-            <select id="fineTarget">
-              <option value="start">Start</option>
-              <option value="end">End</option>
-              <option value="playhead">Playhead</option>
+          <div class="active-section-block">
+            <label for="activeSectionSelect">Active section</label>
+            <select id="activeSectionSelect" class="active-section-select">
+              <option value="-1">None</option>
             </select>
           </div>
-          <div class="field">
-            <label for="nudgeAmount">Nudge amount</label>
-            <select id="nudgeAmount">
-              <option value="0.001">0.001s</option>
-              <option value="0.005">0.005s</option>
-              <option value="0.01" selected>0.010s</option>
-              <option value="0.05">0.050s</option>
-              <option value="0.1">0.100s</option>
-              <option value="1">1.000s</option>
-            </select>
+          <div class="section-end-options" role="group" aria-label="Playback options">
+            <label class="toggle">
+              <input id="loopToggle" type="checkbox" checked>
+              Loop active section
+            </label>
+            <label class="toggle">
+              <input id="useSectionSpeedToggle" type="checkbox" checked>
+              Use section speed
+            </label>
+            <label class="toggle">
+              <input id="moveToNextSectionToggle" type="checkbox">
+              Move to next section
+            </label>
           </div>
+        </div>
+      </section>
+
+      <aside class="stack supporting-panels" aria-label="Sharing and keyboard shortcuts">
+        <div class="panel stack">
+          <div class="field">
+            <label for="shareUrl">Current share URL</label>
+            <div class="row share-url-row">
+              <textarea id="shareUrl" readonly spellcheck="false"></textarea>
+              <button id="copyShareButton" class="primary" type="button">Copy URL</button>
+            </div>
+          </div>
+          <output id="shareStatus" class="status" aria-live="polite"></output>
+        </div>
+
+        <div class="panel stack">
+          <h2>Keyboard shortcuts</h2>
+          <ul class="kbd-list">
+            <li><kbd>Space</kbd> Play / pause</li>
+            <li><kbd>P</kbd> Play active section</li>
+            <li><kbd>S</kbd> Set active start</li>
+            <li><kbd>E</kbd> Set active end</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <div class="stack workspace-column sections-column">
+      <section id="sectionsPanel" class="panel sections-panel" aria-labelledby="sectionsHeading">
+      <div class="row">
+        <div class="grow">
+          <h2 id="sectionsHeading">Sections</h2>
+        </div>
+        <button id="addSectionButton" class="primary" type="button">Add section</button>
+      </div>
+
+      <div id="sectionList" class="section-list" aria-live="polite"></div>
+      </section>
+
+      <section id="fineTunePanel" class="panel stack fine-panel" aria-labelledby="fineTuneHeading" aria-describedby="fineTuneHint" hidden>
+      <div class="fine-header">
+        <h2 id="fineTuneHeading">Fine tune</h2>
+        <div id="nudgeAmountButtons" class="nudge-amount-buttons" role="group" aria-label="Fine tune amount">
+          <button type="button" data-nudge-amount="0.05" aria-pressed="false">0.05s</button>
+          <button type="button" data-nudge-amount="0.1" aria-pressed="true">0.1s</button>
+          <button type="button" data-nudge-amount="0.25" aria-pressed="false">0.25s</button>
+          <button type="button" data-nudge-amount="0.5" aria-pressed="false">0.5s</button>
+          <button type="button" data-nudge-amount="1" aria-pressed="false">1s</button>
+        </div>
+      </div>
+      <div class="fine-grid">
+        <div class="fine-row" role="group" aria-label="Adjust section start">
+          <span>Start</span>
           <div class="fine-buttons">
-            <button id="nudgeDownButton" type="button">−</button>
-            <button id="nudgeUpButton" type="button">+</button>
+            <button id="nudgeStartDownButton" type="button" aria-label="Decrease section start">−</button>
+            <button id="nudgeStartUpButton" type="button" aria-label="Increase section start">+</button>
           </div>
-          <button id="seekActiveStartButton" type="button">Seek active start</button>
+        </div>
+        <div class="fine-row" role="group" aria-label="Adjust section end">
+          <span>End</span>
+          <div class="fine-buttons">
+            <button id="nudgeEndDownButton" type="button" aria-label="Decrease section end">−</button>
+            <button id="nudgeEndUpButton" type="button" aria-label="Increase section end">+</button>
+          </div>
         </div>
       </div>
-
-      <div class="panel stack">
-        <h2>Keyboard shortcuts</h2>
-        <ul class="kbd-list">
-          <li><kbd>Space</kbd> Play / pause</li>
-          <li><kbd>P</kbd> Play active section</li>
-          <li><kbd>S</kbd> Set active start</li>
-          <li><kbd>E</kbd> Set active end</li>
-          <li><kbd>,</kbd> Seek −0.1s</li>
-          <li><kbd>.</kbd> Seek +0.1s</li>
-        </ul>
-      </div>
-
-      <div class="panel">
-        <p class="footer-note">No localStorage, sessionStorage, cookies, IndexedDB, or server API are used by this app for practice data. YouTube itself is loaded from the public IFrame API.</p>
-      </div>
-    </aside>
+      <p id="fineTuneHint" class="hint">
+        Focus a section’s Start or End field and press <kbd>,</kbd> / <kbd>.</kbd> to decrease / increase its time.
+        <span class="fine-tune-amount-hint">Press <kbd>-</kbd> / <kbd>+</kbd> to decrease / increase the amount.</span>
+      </p>
+      </section>
+    </div>
   </main>
 
   <script>
@@ -633,6 +901,76 @@
       return `section-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 8)}`;
     }
 
+    function formatSectionLabel(section, index) {
+      const name = String(section && section.name || "");
+      return name ? `${index + 1}. ${name}` : `${index + 1}.`;
+    }
+
+    function getAppendedSectionStart(sections, playhead) {
+      const lastSection = sections[sections.length - 1];
+      return lastSection ? roundSeconds(lastSection.end) : roundSeconds(playhead);
+    }
+
+    function createPracticeSection(sections, start, speed, idIndex = sections.length) {
+      const normalizedStart = roundSeconds(start);
+      return {
+        id: createSectionId(idIndex),
+        name: "",
+        start: normalizedStart,
+        end: roundSeconds(normalizedStart + 8),
+        speed: roundSpeed(speed)
+      };
+    }
+
+    function insertSectionAfter(sections, index) {
+      const previous = sections[index];
+      if (!previous) return null;
+      const section = createPracticeSection(sections, previous.end, previous.speed, index + 1);
+      sections.splice(index + 1, 0, section);
+      return section;
+    }
+
+    function removeSectionAt(sections, activeIndex, index) {
+      if (!Number.isInteger(index) || !sections[index]) return { removed: null, activeIndex };
+      const [removed] = sections.splice(index, 1);
+      let nextActiveIndex = activeIndex;
+
+      if (sections.length === 0) {
+        nextActiveIndex = -1;
+      } else if (activeIndex > index) {
+        nextActiveIndex = activeIndex - 1;
+      } else if (activeIndex === index) {
+        nextActiveIndex = Math.min(index, sections.length - 1);
+      }
+
+      return { removed, activeIndex: nextActiveIndex };
+    }
+
+    function setSectionTimeValue(section, field, value) {
+      if (!section || !["start", "end"].includes(field)) return false;
+      const time = roundSeconds(value);
+      if (field === "start") {
+        section.start = time;
+        if (section.end < section.start) section.end = section.start;
+      } else {
+        section.end = time;
+        if (section.start > section.end) section.start = section.end;
+      }
+      return true;
+    }
+
+    function copySectionBoundaryFromNeighbor(sections, index, field) {
+      if (!sections[index] || !["start", "end"].includes(field)) return false;
+      const neighbor = field === "start" ? sections[index - 1] : sections[index + 1];
+      if (!neighbor) return false;
+      const boundary = field === "start" ? neighbor.end : neighbor.start;
+      return setSectionTimeValue(sections[index], field, boundary);
+    }
+
+    function normalizeVideoTitle(value) {
+      return String(value ?? "").trim().slice(0, 200);
+    }
+
     function normalizeState(rawState) {
       const rawSections = Array.isArray(rawState && rawState.sections) ? rawState.sections : [];
       const sections = rawSections.map((section, index) => {
@@ -640,7 +978,7 @@
         const end = Math.max(start, roundSeconds(section.end));
         return {
           id: section.id || createSectionId(index),
-          name: String(section.name || `Section ${index + 1}`).slice(0, 120),
+          name: String(section.name ?? "").slice(0, 120),
           start,
           end,
           speed: roundSpeed(section.speed)
@@ -650,11 +988,15 @@
       let activeIndex = Number.isInteger(rawState && rawState.activeIndex) ? rawState.activeIndex : -1;
       if (activeIndex >= sections.length) activeIndex = sections.length - 1;
       if (activeIndex < -1) activeIndex = -1;
+      const videoId = sanitizeYouTubeId(rawState && rawState.videoId);
 
       return {
         version: STATE_VERSION,
-        videoId: sanitizeYouTubeId(rawState && rawState.videoId),
+        videoId,
+        videoTitle: videoId ? normalizeVideoTitle(rawState && rawState.videoTitle) : "",
         loop: !(rawState && rawState.loop === false),
+        moveToNextSection: !!(rawState && rawState.moveToNextSection === true),
+        useSectionSpeed: !(rawState && rawState.useSectionSpeed === false),
         activeIndex,
         sections
       };
@@ -662,11 +1004,10 @@
 
     function compactState(state) {
       const normalized = normalizeState(state || {});
-      return {
+      const compact = {
         v: STATE_VERSION,
         y: normalized.videoId,
         l: normalized.loop ? 1 : 0,
-        a: normalized.activeIndex,
         s: normalized.sections.map(section => [
           section.name,
           roundSeconds(section.start),
@@ -674,6 +1015,10 @@
           roundSpeed(section.speed)
         ])
       };
+      if (normalized.videoTitle) compact.t = normalized.videoTitle;
+      if (normalized.moveToNextSection) compact.n = 1;
+      if (!normalized.useSectionSpeed) compact.r = 0;
+      return compact;
     }
 
     function inflateState(compact) {
@@ -683,12 +1028,15 @@
 
       return normalizeState({
         videoId: compact.y,
+        videoTitle: compact.t,
         loop: compact.l !== 0,
-        activeIndex: Number.isInteger(compact.a) ? compact.a : -1,
+        moveToNextSection: compact.n === 1,
+        useSectionSpeed: compact.r !== 0,
+        activeIndex: -1,
         sections: Array.isArray(compact.s)
           ? compact.s.map((entry, index) => ({
               id: createSectionId(index),
-              name: Array.isArray(entry) ? entry[0] : `Section ${index + 1}`,
+              name: Array.isArray(entry) ? entry[0] : "",
               start: Array.isArray(entry) ? entry[1] : 0,
               end: Array.isArray(entry) ? entry[2] : 0,
               speed: Array.isArray(entry) ? entry[3] : 1
@@ -725,41 +1073,56 @@
     /* URL_STATE_UTILS_END */
 
     const state = normalizeState({});
+    const APP_TITLE = "YouTube Practice Sections";
+    const VIDEO_STATUS_HIDE_AFTER_MS = 3000;
+    const SHARE_STATUS_HIDE_AFTER_MS = 3000;
     const PLAYBACK_SPEED_OPTIONS = [
       0.25, 0.3, 0.35, 0.4, 0.45,
       0.5, 0.55, 0.6, 0.65, 0.7,
       0.75, 0.8, 0.85, 0.9, 0.95,
       1, 1.25, 1.5
     ];
+    const NUDGE_AMOUNTS = [0.05, 0.1, 0.25, 0.5, 1];
+    const DEFAULT_NUDGE_AMOUNT = 0.1;
     let player = null;
     let playerReady = false;
     let ignoreNextHashChange = false;
     let tickTimer = null;
     let lastRenderedHash = "";
+    let playerPanelResizeObserver = null;
+    let sectionScrollFrame = null;
+    let boundaryTransitionSectionId = "";
+    let boundaryTransitionUntil = 0;
+    let pendingVideoTitleId = "";
+    let selectedNudgeAmount = DEFAULT_NUDGE_AMOUNT;
+    const expandedSectionIds = new Set();
+    const statusHideTimers = new WeakMap();
 
     const elements = {
+      playerPanel: document.getElementById("playerPanel"),
+      sectionsPanel: document.getElementById("sectionsPanel"),
       videoInput: document.getElementById("videoInput"),
+      videoTitleInput: document.getElementById("videoTitleInput"),
       loadVideoButton: document.getElementById("loadVideoButton"),
       videoStatus: document.getElementById("videoStatus"),
       player: document.getElementById("player"),
       currentTime: document.getElementById("currentTime"),
-      activeSectionLabel: document.getElementById("activeSectionLabel"),
+      activeSectionSelect: document.getElementById("activeSectionSelect"),
       playPauseButton: document.getElementById("playPauseButton"),
-      seekBackButton: document.getElementById("seekBackButton"),
-      seekForwardButton: document.getElementById("seekForwardButton"),
       loopToggle: document.getElementById("loopToggle"),
+      useSectionSpeedToggle: document.getElementById("useSectionSpeedToggle"),
+      moveToNextSectionToggle: document.getElementById("moveToNextSectionToggle"),
       addSectionButton: document.getElementById("addSectionButton"),
       sectionList: document.getElementById("sectionList"),
       shareUrl: document.getElementById("shareUrl"),
       copyShareButton: document.getElementById("copyShareButton"),
-      openShareButton: document.getElementById("openShareButton"),
-      resetButton: document.getElementById("resetButton"),
       shareStatus: document.getElementById("shareStatus"),
-      fineTarget: document.getElementById("fineTarget"),
-      nudgeAmount: document.getElementById("nudgeAmount"),
-      nudgeDownButton: document.getElementById("nudgeDownButton"),
-      nudgeUpButton: document.getElementById("nudgeUpButton"),
-      seekActiveStartButton: document.getElementById("seekActiveStartButton")
+      fineTunePanel: document.getElementById("fineTunePanel"),
+      nudgeAmountButtons: document.getElementById("nudgeAmountButtons"),
+      nudgeStartDownButton: document.getElementById("nudgeStartDownButton"),
+      nudgeStartUpButton: document.getElementById("nudgeStartUpButton"),
+      nudgeEndDownButton: document.getElementById("nudgeEndDownButton"),
+      nudgeEndUpButton: document.getElementById("nudgeEndUpButton")
     };
 
     const youtubeApiReady = new Promise(resolve => {
@@ -769,14 +1132,19 @@
     function boot() {
       try {
         applyState(decodeStateFromHash(window.location.hash), { loadVideo: true, syncUrl: false });
-        setStatus(elements.videoStatus, state.videoId ? "Loaded state from the URL." : "Paste a YouTube URL to begin.", state.videoId ? "good" : "");
+        if (state.videoId) {
+          setVideoStatus("Loaded state from the URL.", "good");
+        } else {
+          setVideoStatus("Paste a YouTube URL to begin.");
+        }
       } catch (error) {
-        setStatus(elements.videoStatus, `Could not read shared URL: ${error.message}`, "bad");
+        setVideoStatus(`Could not read shared URL: ${error.message}`, "bad");
         applyState(normalizeState({}), { loadVideo: false, syncUrl: true });
       }
 
       bindEvents();
       renderAll();
+      observePlayerPanelSize();
       startTicker();
     }
 
@@ -785,22 +1153,34 @@
       elements.videoInput.addEventListener("keydown", event => {
         if (event.key === "Enter") loadVideoFromInput();
       });
+      elements.videoTitleInput.addEventListener("input", handleVideoTitleInput);
 
       elements.playPauseButton.addEventListener("click", togglePlayPause);
-      elements.seekBackButton.addEventListener("click", () => seekBy(-5));
-      elements.seekForwardButton.addEventListener("click", () => seekBy(5));
       elements.loopToggle.addEventListener("change", () => {
         state.loop = elements.loopToggle.checked;
         syncAndRender();
       });
+      elements.useSectionSpeedToggle.addEventListener("change", () => {
+        state.useSectionSpeed = elements.useSectionSpeedToggle.checked;
+        applyActiveSpeed();
+        syncAndRender();
+      });
+      elements.moveToNextSectionToggle.addEventListener("change", () => {
+        state.moveToNextSection = elements.moveToNextSectionToggle.checked;
+        syncAndRender();
+      });
+      elements.activeSectionSelect.addEventListener("change", handleActiveSectionChange);
 
       elements.addSectionButton.addEventListener("click", addSectionAtPlayhead);
       elements.copyShareButton.addEventListener("click", copyShareUrl);
-      elements.openShareButton.addEventListener("click", () => window.open(elements.shareUrl.value, "_blank", "noopener"));
-      elements.resetButton.addEventListener("click", resetPageState);
-      elements.nudgeDownButton.addEventListener("click", () => nudgeSelected(-getNudgeAmount()));
-      elements.nudgeUpButton.addEventListener("click", () => nudgeSelected(getNudgeAmount()));
-      elements.seekActiveStartButton.addEventListener("click", seekActiveStart);
+      elements.nudgeAmountButtons.addEventListener("click", event => {
+        const button = event.target.closest("button[data-nudge-amount]");
+        if (button) setNudgeAmount(button.dataset.nudgeAmount);
+      });
+      elements.nudgeStartDownButton.addEventListener("click", () => nudgeSelected("start", -getNudgeAmount()));
+      elements.nudgeStartUpButton.addEventListener("click", () => nudgeSelected("start", getNudgeAmount()));
+      elements.nudgeEndDownButton.addEventListener("click", () => nudgeSelected("end", -getNudgeAmount()));
+      elements.nudgeEndUpButton.addEventListener("click", () => nudgeSelected("end", getNudgeAmount()));
 
       elements.sectionList.addEventListener("input", handleSectionInput);
       elements.sectionList.addEventListener("change", handleSectionChange);
@@ -826,13 +1206,21 @@
 
     function applyState(nextState, options = {}) {
       const normalized = normalizeState(nextState);
+      expandedSectionIds.clear();
       state.videoId = normalized.videoId;
+      state.videoTitle = normalized.videoTitle;
       state.loop = normalized.loop;
+      state.useSectionSpeed = normalized.useSectionSpeed;
+      state.moveToNextSection = normalized.moveToNextSection;
       state.activeIndex = normalized.activeIndex;
       state.sections = normalized.sections;
+      pendingVideoTitleId = state.videoId && !state.videoTitle ? state.videoId : "";
+      guardSectionBoundary(getActiveSection());
 
       elements.videoInput.value = formatYouTubeUrl(state.videoId);
       elements.loopToggle.checked = state.loop;
+      elements.useSectionSpeedToggle.checked = state.useSectionSpeed;
+      elements.moveToNextSectionToggle.checked = state.moveToNextSection;
 
       if (options.loadVideo && state.videoId) {
         loadVideoById(state.videoId);
@@ -842,17 +1230,50 @@
       renderAll();
     }
 
+    function handleVideoTitleInput() {
+      pendingVideoTitleId = "";
+      state.videoTitle = normalizeVideoTitle(elements.videoTitleInput.value);
+      updateDocumentTitle();
+      syncUrl();
+    }
+
+    function renderVideoTitle() {
+      elements.videoTitleInput.hidden = !state.videoId;
+      elements.videoTitleInput.value = state.videoTitle;
+      updateDocumentTitle();
+    }
+
+    function updateDocumentTitle() {
+      document.title = state.videoTitle ? `${APP_TITLE}: ${state.videoTitle}` : APP_TITLE;
+    }
+
+    function captureVideoTitleFromPlayer() {
+      if (!pendingVideoTitleId || state.videoTitle || !player || typeof player.getVideoData !== "function") return;
+      const videoData = player.getVideoData() || {};
+      const videoId = sanitizeYouTubeId(videoData.video_id);
+      if (!videoId || videoId !== pendingVideoTitleId || videoId !== state.videoId) return;
+
+      const videoTitle = normalizeVideoTitle(videoData.title);
+      if (!videoTitle) return;
+      state.videoTitle = videoTitle;
+      pendingVideoTitleId = "";
+      renderVideoTitle();
+      syncUrl();
+    }
+
     function loadVideoFromInput() {
       const videoId = extractYouTubeId(elements.videoInput.value);
       if (!videoId) {
-        setStatus(elements.videoStatus, "That does not look like a valid YouTube URL.", "bad");
+        setVideoStatus("That does not look like a valid YouTube URL.", "bad");
         return;
       }
 
+      if (videoId !== state.videoId) state.videoTitle = "";
       state.videoId = videoId;
+      pendingVideoTitleId = state.videoTitle ? "" : videoId;
       elements.videoInput.value = formatYouTubeUrl(videoId);
       loadVideoById(videoId);
-      setStatus(elements.videoStatus, "Video loaded. Add or play a section to begin practicing.", "good");
+      setVideoStatus("Video loaded. Add or play a section to begin practicing.", "good");
       syncAndRender();
     }
 
@@ -863,6 +1284,7 @@
       if (player) {
         playerReady = true;
         player.loadVideoById(videoId);
+        captureVideoTitleFromPlayer();
         applyActiveSpeed();
         return;
       }
@@ -880,26 +1302,31 @@
         events: {
           onReady: () => {
             playerReady = true;
+            captureVideoTitleFromPlayer();
             applyActiveSpeed();
           },
           onStateChange: () => {
+            captureVideoTitleFromPlayer();
             applyActiveSpeed();
           },
           onPlaybackRateChange: () => {
             applyActiveSpeed();
           },
           onError: event => {
-            setStatus(elements.videoStatus, `YouTube player error ${event.data}. Check that the video allows embedding.`, "bad");
+            setVideoStatus(`YouTube player error ${event.data}. Check that the video allows embedding.`, "bad");
           }
         }
       });
     }
 
     function renderAll() {
+      renderVideoTitle();
       renderShareUrl();
-      renderActiveLabel();
+      renderActiveSectionSelect();
       renderSections();
       elements.loopToggle.checked = state.loop;
+      elements.useSectionSpeedToggle.checked = state.useSectionSpeed;
+      elements.moveToNextSectionToggle.checked = state.moveToNextSection;
       updateButtonStates();
     }
 
@@ -930,60 +1357,80 @@
       }
     }
 
-    function renderActiveLabel() {
-      const section = getActiveSection();
-      elements.activeSectionLabel.textContent = section ? `${state.activeIndex + 1}. ${section.name}` : "None";
+    function renderActiveSectionSelect() {
+      const activeIndex = state.sections[state.activeIndex] ? state.activeIndex : -1;
+      elements.activeSectionSelect.innerHTML = [
+        `<option value="-1"${activeIndex === -1 ? " selected" : ""}>None</option>`,
+        ...state.sections.map((section, index) =>
+          `<option value="${index}"${index === activeIndex ? " selected" : ""}>${escapeAttribute(formatSectionLabel(section, index))}</option>`
+        )
+      ].join("");
+      elements.activeSectionSelect.value = String(activeIndex);
     }
 
     function renderSections() {
+      elements.fineTunePanel.hidden = !state.sections.some(section => expandedSectionIds.has(section.id));
       if (state.sections.length === 0) {
-        elements.sectionList.innerHTML = `<div class="empty-state">No sections yet. Move the video to the start of a phrase and click <strong>Add section at playhead</strong>.</div>`;
+        elements.sectionList.innerHTML = `<div class="empty-state">No sections yet. Move the video to the start of a phrase and click <strong>Add section</strong>.</div>`;
         return;
       }
 
-      elements.sectionList.innerHTML = state.sections.map((section, index) => `
-        <article class="section-card${index === state.activeIndex ? " active" : ""}" data-index="${index}">
-          <div class="section-header">
+      elements.sectionList.innerHTML = state.sections.map((section, index) => {
+        const expanded = expandedSectionIds.has(section.id);
+        const detailsId = `section-details-${section.id}`;
+        const sectionLabel = formatSectionLabel(section, index);
+        return `
+        <article class="section-card ${expanded ? "expanded" : "collapsed"}${index === state.activeIndex ? " active" : ""}" data-index="${index}" data-section-id="${escapeAttribute(section.id)}">
+          <div class="section-summary">
+            <button class="section-toggle" data-action="toggle-section" data-index="${index}" type="button" aria-expanded="${expanded}" aria-controls="${detailsId}">
+              <span class="section-toggle-icon" aria-hidden="true">▶</span>
+              <span class="section-summary-text">
+                <strong class="section-summary-name">${escapeAttribute(sectionLabel)}</strong>
+                <span class="section-summary-time">${formatTime(section.start)} – ${formatTime(section.end)}</span>
+              </span>
+            </button>
+            <div class="section-summary-controls">
+              <select id="speed-${section.id}" data-field="speed" data-index="${index}" aria-label="Speed for section ${escapeAttribute(sectionLabel)}">
+                ${renderSpeedOptions(section.speed)}
+              </select>
+              <button class="primary small" data-action="play-section" data-index="${index}" type="button">Play</button>
+            </div>
+          </div>
+          <div id="${detailsId}" class="section-details"${expanded ? "" : " hidden"}>
             <div class="field">
               <label for="name-${section.id}">Name</label>
               <input id="name-${section.id}" data-field="name" data-index="${index}" type="text" value="${escapeAttribute(section.name)}" maxlength="120">
             </div>
-            <div class="field">
-              <label for="speed-${section.id}">Speed</label>
-              <select id="speed-${section.id}" data-field="speed" data-index="${index}">
-                ${renderSpeedOptions(section.speed)}
-              </select>
+            <div class="section-fields">
+              ${renderTimeField(section, index, "start", "Start")}
+              ${renderTimeField(section, index, "end", "End")}
             </div>
-          </div>
-          <div class="section-fields">
-            ${renderTimeField(section, index, "start", "Start")}
-            ${renderTimeField(section, index, "end", "End")}
-            <div class="field">
-              <span class="label">Length</span>
-              <input type="text" value="${formatTime(section.end - section.start)}" readonly aria-label="Section length">
+            <div class="section-actions">
+              <button class="primary small" data-action="insert-after" data-index="${index}" type="button">New section after</button>
+              <button class="danger small" data-action="delete" data-index="${index}" type="button" aria-label="Delete section ${escapeAttribute(sectionLabel)}">Delete</button>
             </div>
-          </div>
-          <div class="section-actions">
-            <button class="primary small" data-action="play-section" data-index="${index}" type="button">Play loop</button>
-            <button class="small" data-action="set-active" data-index="${index}" type="button">Select</button>
-            <button class="small" data-action="set-start-now" data-index="${index}" type="button">Start = now</button>
-            <button class="small" data-action="set-end-now" data-index="${index}" type="button">End = now</button>
-            <button class="small" data-action="duplicate" data-index="${index}" type="button">Duplicate</button>
-            <button class="small" data-action="move-up" data-index="${index}" type="button" ${index === 0 ? "disabled" : ""}>↑</button>
-            <button class="small" data-action="move-down" data-index="${index}" type="button" ${index === state.sections.length - 1 ? "disabled" : ""}>↓</button>
-            <button class="danger small" data-action="delete" data-index="${index}" type="button">Delete</button>
           </div>
         </article>
-      `).join("");
+      `;
+      }).join("");
     }
 
     function renderTimeField(section, index, field, label) {
+      const neighborButton = field === "start" && index > 0
+        ? `<button class="small" data-action="start-from-previous-section" data-index="${index}" type="button">Previous section</button>`
+        : field === "end" && index < state.sections.length - 1
+          ? `<button class="small" data-action="end-from-next-section" data-index="${index}" type="button">Next section</button>`
+          : "";
       return `
         <div class="field">
           <label for="${field}-${section.id}">${label}</label>
           <div class="time-input-wrap">
             <input id="${field}-${section.id}" data-field="${field}" data-index="${index}" data-time-input="true" type="text" inputmode="decimal" value="${formatTime(section[field])}">
-            <button class="small" data-action="seek-to-${field}" data-index="${index}" type="button" aria-label="Seek to ${label.toLowerCase()}">Go</button>
+            <div class="time-input-actions">
+              <button class="small" data-action="set-${field}-now" data-index="${index}" type="button" aria-label="Set section ${label.toLowerCase()} to current time">Now</button>
+              ${neighborButton}
+              <button class="small" data-action="seek-to-${field}" data-index="${index}" type="button" aria-label="Seek to ${label.toLowerCase()}">Go</button>
+            </div>
           </div>
         </div>
       `;
@@ -1011,14 +1458,10 @@
       if (!Number.isInteger(index) || !field || !state.sections[index]) return;
 
       if (field === "name") {
-        state.sections[index].name = target.value.slice(0, 120) || `Section ${index + 1}`;
+        state.sections[index].name = target.value.slice(0, 120);
+        updateSectionNameDisplay(index);
         syncUrl();
-        renderActiveLabel();
-        return;
-      }
-
-      if (field === "speed") {
-        updateSectionSpeed(index, target.value);
+        renderActiveSectionSelect();
         return;
       }
 
@@ -1027,6 +1470,7 @@
         target.classList.toggle("invalid", !Number.isFinite(parsed));
         if (Number.isFinite(parsed)) {
           updateSectionTime(index, field, parsed, { render: false });
+          updateSectionTimeDisplay(index, { preserveInput: target });
           syncUrl();
         }
       }
@@ -1060,81 +1504,119 @@
       const action = button.dataset.action;
 
       if (!Number.isInteger(index) || !state.sections[index]) return;
-      state.activeIndex = index;
 
-      if (action === "play-section") playSection(index);
-      if (action === "set-active") selectSection(index);
+      if (action === "toggle-section") {
+        toggleSection(index);
+        return;
+      }
+
+      if (action === "delete") {
+        deleteSection(index);
+        syncAndRender();
+        return;
+      }
+
+      if (action === "insert-after") {
+        const section = insertNewSectionAfter(index);
+        syncAndRender();
+        if (section) scrollSectionIntoView(section.id);
+        return;
+      }
+
+      if (action === "play-section") {
+        playSection(index);
+        return;
+      }
+
+      selectSection(index);
+
       if (action === "set-start-now") setSectionBoundaryToNow(index, "start");
       if (action === "set-end-now") setSectionBoundaryToNow(index, "end");
       if (action === "seek-to-start") seekTo(state.sections[index].start);
       if (action === "seek-to-end") seekTo(state.sections[index].end);
-      if (action === "duplicate") duplicateSection(index);
-      if (action === "move-up") moveSection(index, -1);
-      if (action === "move-down") moveSection(index, 1);
-      if (action === "delete") deleteSection(index);
+      if (action === "start-from-previous-section") copySectionBoundaryFromNeighbor(state.sections, index, "start");
+      if (action === "end-from-next-section") copySectionBoundaryFromNeighbor(state.sections, index, "end");
 
       syncAndRender();
     }
 
+    function toggleSection(index) {
+      const section = state.sections[index];
+      if (!section) return;
+
+      if (expandedSectionIds.has(section.id)) {
+        expandedSectionIds.delete(section.id);
+        renderSections();
+        return;
+      }
+
+      expandedSectionIds.clear();
+      expandedSectionIds.add(section.id);
+      selectSection(index);
+      syncAndRender();
+    }
+
     function handleSectionFocus(event) {
+      if (event.target.closest('[data-action="toggle-section"], [data-action="delete"]')) return;
       const sectionCard = event.target.closest(".section-card[data-index]");
       if (!sectionCard) return;
       const index = Number(sectionCard.dataset.index);
       if (Number.isInteger(index) && state.sections[index] && state.activeIndex !== index) {
-        state.activeIndex = index;
-        applyActiveSpeed();
+        selectSection(index);
         syncUrl();
-        renderActiveLabel();
+        renderActiveSectionSelect();
         updateSectionActiveClasses();
         updateButtonStates();
       }
     }
 
     function addSectionAtPlayhead() {
-      const start = getCurrentPlayerTime();
-      const end = roundSeconds(start + 8);
-      state.sections.push({
-        id: createSectionId(state.sections.length),
-        name: `Section ${state.sections.length + 1}`,
-        start,
-        end,
-        speed: getActiveSection() ? getActiveSection().speed : 1
-      });
-      state.activeIndex = state.sections.length - 1;
+      const start = getAppendedSectionStart(state.sections, getCurrentPlayerTime());
+      const section = createPracticeSection(state.sections, start, getActiveSection() ? getActiveSection().speed : 1);
+      state.sections.push(section);
+      expandedSectionIds.clear();
+      expandedSectionIds.add(section.id);
+      selectSection(state.sections.length - 1);
       syncAndRender();
+      scrollSectionIntoView(section.id);
       setStatus(elements.shareStatus, "Section added and encoded into the URL.", "good");
     }
 
     function selectSection(index) {
-      state.activeIndex = index;
+      state.activeIndex = Number.isInteger(index) && state.sections[index] ? index : -1;
+      guardSectionBoundary(getActiveSection());
       applyActiveSpeed();
     }
 
-    function duplicateSection(index) {
-      const original = state.sections[index];
-      state.sections.splice(index + 1, 0, {
-        ...original,
-        id: createSectionId(index + 1),
-        name: `${original.name} copy`
-      });
-      state.activeIndex = index + 1;
+    function handleActiveSectionChange() {
+      const wasPlayingActiveSection = !!getActiveSection() && isPlayerPlaying();
+      const index = Number(elements.activeSectionSelect.value);
+      if (wasPlayingActiveSection && Number.isInteger(index) && state.sections[index]) {
+        playSection(index);
+        return;
+      }
+
+      selectSection(index);
+      syncAndRender();
     }
 
-    function moveSection(index, direction) {
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= state.sections.length) return;
-      const [section] = state.sections.splice(index, 1);
-      state.sections.splice(nextIndex, 0, section);
-      state.activeIndex = nextIndex;
+    function insertNewSectionAfter(index) {
+      const section = insertSectionAfter(state.sections, index);
+      if (!section) return;
+      expandedSectionIds.clear();
+      expandedSectionIds.add(section.id);
+      selectSection(index + 1);
+      return section;
     }
 
     function deleteSection(index) {
-      state.sections.splice(index, 1);
-      if (state.sections.length === 0) {
-        state.activeIndex = -1;
-      } else {
-        state.activeIndex = Math.min(index, state.sections.length - 1);
-      }
+      const result = removeSectionAt(state.sections, state.activeIndex, index);
+      if (!result.removed) return;
+      expandedSectionIds.clear();
+      const lastIndex = state.sections.length - 1;
+      const lastSection = state.sections[lastIndex];
+      if (lastSection) expandedSectionIds.add(lastSection.id);
+      selectSection(lastIndex);
     }
 
     function setSectionBoundaryToNow(index, field) {
@@ -1145,14 +1627,7 @@
       const section = state.sections[index];
       if (!section) return;
 
-      const time = roundSeconds(value);
-      if (field === "start") {
-        section.start = time;
-        if (section.end < section.start) section.end = section.start;
-      } else {
-        section.end = time;
-        if (section.start > section.end) section.start = section.end;
-      }
+      setSectionTimeValue(section, field, value);
 
       if (options.render !== false) syncAndRender();
     }
@@ -1162,7 +1637,9 @@
       if (!section) return;
 
       section.speed = roundSpeed(value);
-      if (index === state.activeIndex) applyActiveSpeed();
+      state.useSectionSpeed = true;
+      elements.useSectionSpeedToggle.checked = true;
+      applyActiveSpeed();
       syncUrl();
     }
 
@@ -1172,6 +1649,15 @@
       });
     }
 
+    function updateSectionNameDisplay(index) {
+      const section = state.sections[index];
+      const card = elements.sectionList.querySelector(`.section-card[data-index="${index}"]`);
+      if (!section || !card) return;
+
+      const summary = card.querySelector(".section-summary-name");
+      if (summary) summary.textContent = formatSectionLabel(section, index);
+    }
+
     function getActiveSection() {
       return state.sections[state.activeIndex] || null;
     }
@@ -1179,38 +1665,93 @@
     function playSection(index = state.activeIndex) {
       const section = state.sections[index];
       if (!section) return;
-      state.activeIndex = index;
-      applyActiveSpeed();
+      selectSection(index);
+      state.loop = true;
       seekTo(section.start);
       playVideo();
-    }
-
-    function seekActiveStart() {
-      const section = getActiveSection();
-      if (!section) return;
-      seekTo(section.start);
+      syncAndRender();
     }
 
     function getNudgeAmount() {
-      return Number(elements.nudgeAmount.value) || 0.01;
+      return selectedNudgeAmount;
     }
 
-    function nudgeSelected(delta) {
-      const target = elements.fineTarget.value;
-      if (target === "playhead") {
-        seekBy(delta);
-        return;
-      }
+    function setNudgeAmount(value) {
+      const amount = Number(value);
+      if (!NUDGE_AMOUNTS.includes(amount)) return;
 
+      selectedNudgeAmount = amount;
+      elements.nudgeAmountButtons.querySelectorAll("button[data-nudge-amount]").forEach(button => {
+        button.setAttribute("aria-pressed", String(Number(button.dataset.nudgeAmount) === amount));
+      });
+    }
+
+    function stepNudgeAmount(direction) {
+      if (direction !== -1 && direction !== 1) return;
+      const currentIndex = NUDGE_AMOUNTS.indexOf(selectedNudgeAmount);
+      if (currentIndex < 0) return;
+
+      const nextIndex = Math.min(NUDGE_AMOUNTS.length - 1, Math.max(0, currentIndex + direction));
+      if (nextIndex !== currentIndex) setNudgeAmount(NUDGE_AMOUNTS[nextIndex]);
+    }
+
+    function nudgeSelected(target, delta) {
+      if (!["start", "end"].includes(target)) return;
       const section = getActiveSection();
       if (!section) return;
       updateSectionTime(state.activeIndex, target, section[target] + delta);
     }
 
+    function nudgeTimeInput(input, delta) {
+      const index = Number(input && input.dataset.index);
+      const field = input && input.dataset.field;
+      const section = state.sections[index];
+      if (!Number.isInteger(index) || !section || !["start", "end"].includes(field)) return;
+
+      updateSectionTime(index, field, section[field] + delta, { render: false });
+      updateSectionTimeDisplay(index);
+      syncUrl();
+    }
+
+    function updateSectionTimeDisplay(index, options = {}) {
+      const section = state.sections[index];
+      const card = elements.sectionList.querySelector(`.section-card[data-index="${index}"]`);
+      if (!section || !card) return;
+
+      for (const field of ["start", "end"]) {
+        const input = card.querySelector(`[data-time-input="true"][data-field="${field}"]`);
+        if (!input) continue;
+        if (input !== options.preserveInput) input.value = formatTime(section[field]);
+        input.classList.remove("invalid");
+      }
+
+      const summary = card.querySelector(".section-summary-time");
+      if (summary) summary.textContent = `${formatTime(section.start)} – ${formatTime(section.end)}`;
+    }
+
     function handleKeyboardShortcuts(event) {
-      if (event.defaultPrevented || isTypingTarget(event.target)) return;
+      if (event.defaultPrevented) return;
 
       const key = event.key.toLowerCase();
+      if ((key === "," || key === ".") && isSectionTimeInput(event.target)) {
+        event.preventDefault();
+        nudgeTimeInput(event.target, (key === "," ? -1 : 1) * getNudgeAmount());
+        return;
+      }
+
+      const decreasesAmount = key === "-" || key === "_";
+      const increasesAmount = key === "=" || key === "+";
+      if (decreasesAmount || increasesAmount) {
+        if (event.metaKey || event.ctrlKey || event.altKey) return;
+        if (elements.fineTunePanel.hidden) return;
+        if (isTypingTarget(event.target) && !isSectionTimeInput(event.target)) return;
+        event.preventDefault();
+        stepNudgeAmount(decreasesAmount ? -1 : 1);
+        return;
+      }
+
+      if (isTypingTarget(event.target)) return;
+
       if (key === " ") {
         event.preventDefault();
         togglePlayPause();
@@ -1223,17 +1764,16 @@
       } else if (key === "e") {
         event.preventDefault();
         if (state.activeIndex >= 0) setSectionBoundaryToNow(state.activeIndex, "end");
-      } else if (key === ",") {
-        event.preventDefault();
-        seekBy(-0.1);
-      } else if (key === ".") {
-        event.preventDefault();
-        seekBy(0.1);
       }
     }
 
     function isTypingTarget(target) {
-      return ["INPUT", "TEXTAREA", "SELECT"].includes(target && target.tagName);
+      return ["INPUT", "TEXTAREA", "SELECT"].includes(target && target.tagName)
+        || !!(target && target.isContentEditable);
+    }
+
+    function isSectionTimeInput(target) {
+      return !!(target && target.dataset.timeInput && ["start", "end"].includes(target.dataset.field));
     }
 
     function startTicker() {
@@ -1246,12 +1786,39 @@
       elements.currentTime.textContent = formatTime(current);
 
       const section = getActiveSection();
-      if (!section || !state.loop || !playerReady || !isPlayerPlaying()) return;
+      if (!section || (!state.loop && !state.moveToNextSection) || !playerReady || !isPlayerPlaying()) return;
 
-      if (current >= section.end - 0.015) {
+      if (boundaryTransitionSectionId === section.id) {
+        if (Date.now() < boundaryTransitionUntil) return;
+        const isInsideSection = current >= Math.max(0, section.start - 0.05) && current < section.end - 0.015;
+        if (!isInsideSection) return;
+        boundaryTransitionSectionId = "";
+        boundaryTransitionUntil = 0;
+        return;
+      }
+
+      if (current < section.end - 0.015) {
+        return;
+      }
+
+      const nextSection = state.sections[state.activeIndex + 1];
+      if (state.moveToNextSection && nextSection) {
+        state.activeIndex += 1;
+        guardSectionBoundary(nextSection);
+        applyActiveSpeed();
+        seekTo(nextSection.start);
+        playVideo();
+        syncAndRender();
+      } else if (state.loop) {
+        guardSectionBoundary(section);
         seekTo(section.start);
         playVideo();
       }
+    }
+
+    function guardSectionBoundary(section, settleMs = 500) {
+      boundaryTransitionSectionId = section ? section.id : "";
+      boundaryTransitionUntil = section ? Date.now() + settleMs : 0;
     }
 
     function togglePlayPause() {
@@ -1278,9 +1845,6 @@
       return roundSeconds(player.getCurrentTime());
     }
 
-    function seekBy(delta) {
-      seekTo(getCurrentPlayerTime() + delta);
-    }
 
     function seekTo(time) {
       if (!playerReady || !player || !player.seekTo) return;
@@ -1290,7 +1854,12 @@
     function applyActiveSpeed() {
       if (!playerReady || !player || !player.setPlaybackRate) return;
       const section = getActiveSection();
-      const desired = section ? roundSpeed(section.speed) : 1;
+      if (!state.useSectionSpeed || !section) {
+        player.setPlaybackRate(1);
+        return;
+      }
+
+      const desired = roundSpeed(section.speed);
       const available = typeof player.getAvailablePlaybackRates === "function" ? player.getAvailablePlaybackRates() : [];
       const rate = available.length ? nearestNumber(available, desired) : desired;
       player.setPlaybackRate(rate);
@@ -1304,7 +1873,7 @@
       renderShareUrl();
       try {
         await navigator.clipboard.writeText(elements.shareUrl.value);
-        setStatus(elements.shareStatus, "Share URL copied to clipboard.", "good");
+        setStatus(elements.shareStatus, "Share URL copied to clipboard.", "good", SHARE_STATUS_HIDE_AFTER_MS);
       } catch (_error) {
         elements.shareUrl.focus();
         elements.shareUrl.select();
@@ -1312,26 +1881,73 @@
       }
     }
 
-    function resetPageState() {
-      if (!confirm("Reset the video and all sections from this page URL?")) return;
-      if (player && player.stopVideo) player.stopVideo();
-      applyState(normalizeState({}), { loadVideo: false, syncUrl: true });
-      elements.player.innerHTML = `<div class="empty-player">Enter a YouTube URL or open a shared link to load a player.</div>`;
-      player = null;
-      playerReady = false;
-      setStatus(elements.videoStatus, "Page state reset. Nothing was stored in the browser.", "good");
-    }
 
     function updateButtonStates() {
       const hasActiveSection = state.activeIndex >= 0 && state.activeIndex < state.sections.length;
-      elements.nudgeDownButton.disabled = !hasActiveSection && elements.fineTarget.value !== "playhead";
-      elements.nudgeUpButton.disabled = !hasActiveSection && elements.fineTarget.value !== "playhead";
-      elements.seekActiveStartButton.disabled = !hasActiveSection;
+      elements.nudgeStartDownButton.disabled = !hasActiveSection;
+      elements.nudgeStartUpButton.disabled = !hasActiveSection;
+      elements.nudgeEndDownButton.disabled = !hasActiveSection;
+      elements.nudgeEndUpButton.disabled = !hasActiveSection;
     }
 
-    function setStatus(element, message, kind = "") {
+    function observePlayerPanelSize() {
+      updateSectionsPanelHeight();
+      window.addEventListener("resize", updateSectionsPanelHeight);
+      if (typeof ResizeObserver === "function") {
+        playerPanelResizeObserver = new ResizeObserver(updateSectionsPanelHeight);
+        playerPanelResizeObserver.observe(elements.playerPanel);
+      }
+    }
+
+    function updateSectionsPanelHeight() {
+      if (window.matchMedia("(max-width: 980px)").matches) {
+        elements.sectionsPanel.style.removeProperty("--player-panel-height");
+        return;
+      }
+
+      const height = Math.ceil(elements.playerPanel.getBoundingClientRect().height);
+      elements.sectionsPanel.style.setProperty("--player-panel-height", `${height}px`);
+    }
+
+    function scrollSectionIntoView(sectionId) {
+      if (sectionScrollFrame !== null) cancelAnimationFrame(sectionScrollFrame);
+      sectionScrollFrame = requestAnimationFrame(() => {
+        sectionScrollFrame = null;
+        const card = Array.from(elements.sectionList.querySelectorAll(".section-card[data-section-id]"))
+          .find(sectionCard => sectionCard.dataset.sectionId === sectionId);
+        if (!card) return;
+
+        card.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+        });
+      });
+    }
+
+    function setStatus(element, message, kind = "", hideAfterMs = 0) {
+      const previousTimer = statusHideTimers.get(element);
+      if (previousTimer !== undefined) {
+        clearTimeout(previousTimer);
+        statusHideTimers.delete(element);
+      }
+
       element.textContent = message;
       element.className = `status ${kind}`.trim();
+
+      if (hideAfterMs > 0) {
+        const timer = setTimeout(() => {
+          if (statusHideTimers.get(element) !== timer) return;
+          statusHideTimers.delete(element);
+          element.textContent = "";
+          element.className = "status";
+        }, hideAfterMs);
+        statusHideTimers.set(element, timer);
+      }
+    }
+
+    function setVideoStatus(message, kind = "") {
+      setStatus(elements.videoStatus, message, kind, VIDEO_STATUS_HIDE_AFTER_MS);
     }
 
     function getBaseUrl() {
