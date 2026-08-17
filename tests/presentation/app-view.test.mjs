@@ -5,6 +5,7 @@ import { createAppView } from "../../src/presentation/app-view.js";
 
 function makeElements() {
   return {
+    newPracticeLink: { href: "" },
     videoTitleInput: { hidden: true, value: "" },
     videoInput: { value: "" },
     shareUrl: { value: "" },
@@ -44,6 +45,8 @@ test("app view renders title, URL, controls, and readout", () => {
   assert.equal(documentObject.title, "Normalized title | YouTube Practice Sections");
   view.renderVideoInput(state.videoId);
   assert.equal(elements.videoInput.value, "https://www.youtube.com/watch?v=abcdefghijk");
+  view.renderNewPracticeLink("https://example.test/tools/practice/?theme=dark");
+  assert.equal(elements.newPracticeLink.href, "https://example.test/tools/practice/?theme=dark");
   view.renderControls(state);
   assert.equal(elements.loopToggle.checked, true);
   assert.equal(elements.useSectionSpeedToggle.checked, true);

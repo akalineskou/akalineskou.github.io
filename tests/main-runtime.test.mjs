@@ -51,7 +51,7 @@ test("composition root boots against the static DOM contract", async () => {
     createElement: () => createElement("script")
   };
   globalThis.window = {
-    location: { href: "https://example.test/", hash: "" },
+    location: { href: "https://example.test/tools/practice/?theme=dark", hash: "" },
     addEventListener: (name, listener) => windowListeners.set(name, listener),
     removeEventListener: name => windowListeners.delete(name),
     matchMedia: () => ({ matches: false })
@@ -75,7 +75,8 @@ test("composition root boots against the static DOM contract", async () => {
 
   assert.equal(document.title, "YouTube Practice Sections");
   assert.match(elements.get("sectionList").innerHTML, /No sections yet/);
-  assert.match(elements.get("shareUrl").value, /^https:\/\/example\.test\/#ytp=/);
+  assert.equal(elements.get("newPracticeLink").href, "https://example.test/tools/practice/?theme=dark");
+  assert.match(elements.get("shareUrl").value, /^https:\/\/example\.test\/tools\/practice\/\?theme=dark#ytp=/);
   assert.equal(elements.get("videoStatus").textContent, "Paste a YouTube URL to begin.");
   assert.equal(documentListeners.has("keydown"), true);
   assert.equal(windowListeners.has("hashchange"), true);

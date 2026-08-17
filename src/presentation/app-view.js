@@ -29,6 +29,10 @@ export function createAppView({ elements, documentObject = document }) {
     elements.videoInput.value = formatYouTubeUrl(videoId);
   }
 
+  function renderNewPracticeLink(url) {
+    elements.newPracticeLink.href = url;
+  }
+
   function renderShareUrl(url) {
     elements.shareUrl.value = url;
   }
@@ -42,6 +46,7 @@ export function createAppView({ elements, documentObject = document }) {
     renderVideoTitle,
     renderControls,
     renderVideoInput,
+    renderNewPracticeLink,
     renderShareUrl,
     renderCurrentTime
   };

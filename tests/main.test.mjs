@@ -36,6 +36,8 @@ test("static markup contains every element required by the composition root", ()
     assert.equal((indexHtml.match(new RegExp(`id="${id}"`, "g")) || []).length, 1, `#${id} should exist once`);
   }
   assert.match(indexHtml, /<header>\s*<h1>YouTube Practice Sections<\/h1>/);
+  assert.match(indexHtml, /<a id="newPracticeLink"[^>]*target="_blank"[^>]*rel="noopener noreferrer"[^>]*aria-label="Open a new practice in a new tab"/);
+  assert.match(indexHtml, /id="newPracticeLink"[\s\S]*?<svg[^>]*aria-hidden="true"[^>]*>[\s\S]*?<path[^>]*\/>[\s\S]*?<\/svg>/);
   assert.match(indexHtml, /id="videoTitleInput"[^>]*maxlength="200"[^>]*hidden/);
   assert.match(indexHtml, /id="loopToggle"[^>]*checked/);
   assert.match(indexHtml, /id="useSectionSpeedToggle"[^>]*checked/);
@@ -47,6 +49,9 @@ test("static markup contains every element required by the composition root", ()
 });
 
 test("responsive two-column and scrolling layout contracts remain intact", () => {
+  assert.match(stylesCss, /header\s*{[^}]*display: flex;[^}]*gap: 0\.3rem;[^}]*align-items: flex-start;/s);
+  assert.match(stylesCss, /\.new-practice-link\s*{[^}]*width: 1\.65rem;[^}]*height: 1\.65rem;[^}]*margin-top: -0\.35rem;/s);
+  assert.match(stylesCss, /\.new-practice-link:focus-visible\s*{[^}]*box-shadow:/s);
   assert.match(stylesCss, /\.grid\s*{[^}]*grid-template-columns: minmax\(0, 1\.15fr\) minmax\(360px, 0\.85fr\);/s);
   assert.match(stylesCss, /\.sections-panel\s*{[^}]*grid-template-rows: auto minmax\(0, 1fr\);[^}]*max-height: var\(--player-panel-height, none\);[^}]*overflow: hidden;/s);
   assert.match(stylesCss, /\.section-list\s*{[^}]*overflow-y: auto;/s);

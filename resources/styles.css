@@ -106,7 +106,47 @@ main {
 }
 
 header {
+  display: flex;
+  gap: 0.3rem;
+  align-items: flex-start;
   padding: 2rem 0 1rem;
+}
+
+.new-practice-link {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 1.65rem;
+  height: 1.65rem;
+  margin-top: -0.35rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgba(11, 17, 32, 0.8);
+  color: var(--accent);
+  text-decoration: none;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.new-practice-link:hover,
+.new-practice-link:focus-visible {
+  border-color: var(--accent);
+  background: var(--panel-soft);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.new-practice-link:focus-visible {
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+}
+
+.new-practice-link svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 h1 {

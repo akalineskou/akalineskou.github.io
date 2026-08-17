@@ -6,7 +6,10 @@ import { createBrowserLocation } from "../../../src/infrastructure/browser/locat
 function makeWindow() {
   const listeners = new Map();
   return {
-    location: { href: "https://example.test/app#old", hash: "#old" },
+    location: {
+      href: "https://example.test/tools/practice/?theme=dark#ytp=old",
+      hash: "#ytp=old"
+    },
     addEventListener(name, listener) { listeners.set(name, listener); },
     removeEventListener(name) { listeners.delete(name); },
     dispatch(name) { listeners.get(name)?.(); },
@@ -23,8 +26,8 @@ test("browser location builds and synchronizes share URLs", () => {
   });
   const state = { videoId: "", sections: [] };
 
-  assert.equal(location.getBaseUrl(), "https://example.test/app");
-  assert.match(location.getShareUrl(state), /^https:\/\/example\.test\/app#ytp=/);
+  assert.equal(location.getBaseUrl(), "https://example.test/tools/practice/?theme=dark");
+  assert.match(location.getShareUrl(state), /^https:\/\/example\.test\/tools\/practice\/\?theme=dark#ytp=/);
   location.syncState(state);
   location.syncState(state);
   assert.equal(replacements.length, 1, "identical state should not rewrite history");

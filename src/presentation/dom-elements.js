@@ -1,4 +1,5 @@
 export const ELEMENT_IDS = Object.freeze({
+  newPracticeLink: "newPracticeLink",
   playerPanel: "playerPanel",
   sectionsPanel: "sectionsPanel",
   videoInput: "videoInput",

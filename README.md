@@ -8,6 +8,7 @@ The browser code is organized as native ES modules under `src/`. There is no bun
 
 - Load standard, shortened, embedded, Shorts, Live, and privacy-enhanced YouTube URLs.
 - Keep the canonical full `youtube.com` URL visible after loading.
+- Open a new empty practice session in another tab from the page header.
 - Save an editable video title in the shared configuration and browser title. Matching YouTube metadata fills only a missing title.
 - Add the first section at the playhead; later **Add section** actions start at the final displayed section's end.
 - Insert a section after any existing section without changing later sections.

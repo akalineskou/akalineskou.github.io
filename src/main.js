@@ -24,6 +24,7 @@ const expandedSectionIds = new Set();
 const location = createBrowserLocation();
 const statusPresenter = createStatusPresenter();
 const appView = createAppView({ elements });
+appView.renderNewPracticeLink(location.getBaseUrl());
 const sectionView = createSectionView(elements);
 const sectionScroller = createSectionScroller({ sectionList: elements.sectionList });
 const fineTuneControl = createFineTuneControl({ container: elements.nudgeAmountButtons });
